@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  plan         String   @default("free")
+  apiKey       String   @unique @map("api_key")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  botConfig    BotConfig?
+  tools        Tool[]
+  knowledge    KnowledgeBase[]
+  sessions     ChatSession[]
+  auditLogs    AuditLog[]
+
+  @@map("tenants")
+}
+
+model BotConfig {
+  id             String   @id @default(uuid())
+  tenantId       String   @unique @map("tenant_id")
+  name           String   @default("AI Assistant")
+  avatarUrl      String?  @map("avatar_url")
+  systemPrompt   String   @default("You are a helpful assistant.") @map("system_prompt")
+  personality    String   @default("professional")
+  welcomeMessage String   @default("Hi! How can I help you today?") @map("welcome_message")
+  model          String   @default("MiniMax-M2.7-highspeed")
+  maxTokens      Int      @default(1024) @map("max_tokens")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("bot_configs")
+}
+
+model Tool {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  name           String
+  description    String
+  inputSchema    Json     @map("input_schema")
+  endpointUrl    String   @map("endpoint_url")
+  httpMethod     String   @default("POST") @map("http_method")
+  headers        Json     @default("{}")
+  authConfig     Json?    @map("auth_config")
+  isSensitive    Boolean  @default(false) @map("is_sensitive")
+  isActive       Boolean  @default(true) @map("is_active")
+  timeoutSeconds Int      @default(30) @map("timeout_seconds")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  confirmations Confirmation[]
+
+  @@map("tools")
+}
+
+model KnowledgeBase {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  title     String
+  content   String
+  category  String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("knowledge_base")
+}
+
+model ChatSession {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  externalUserId String?  @map("external_user_id")
+  startedAt      DateTime @default(now()) @map("started_at")
+  lastMessageAt  DateTime? @map("last_message_at")
+  metadata       Json     @default("{}")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages      Message[]
+  confirmations Confirmation[]
+
+  @@map("chat_sessions")
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  sessionId  String   @map("session_id")
+  role       String
+  content    String?
+  toolCall   Json?    @map("tool_call")
+  toolResult Json?    @map("tool_result")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  session      ChatSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  confirmation Confirmation?
+
+  @@map("messages")
+}
+
+model Confirmation {
+  id         String    @id @default(uuid())
+  messageId  String    @unique @map("message_id")
+  sessionId  String    @map("session_id")
+  toolId     String    @map("tool_id")
+  toolName   String    @map("tool_name")
+  params     Json
+  summary    String?
+  status     String    @default("pending")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  resolvedAt DateTime? @map("resolved_at")
+
+  message Message     @relation(fields: [messageId], references: [id])
+  session ChatSession @relation(fields: [sessionId], references: [id])
+  tool    Tool        @relation(fields: [toolId], references: [id])
+
+  @@map("confirmations")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  action    String
+  details   Json?
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
