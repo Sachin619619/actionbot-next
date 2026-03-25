@@ -17,12 +17,13 @@ model Tenant {
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  botConfig    BotConfig?
-  tools        Tool[]
-  knowledge    KnowledgeBase[]
-  sessions     ChatSession[]
-  auditLogs    AuditLog[]
-  actions      Action[]
+  botConfig BotConfig?
+  tools     Tool[]
+  knowledge KnowledgeBase[]
+  sessions  ChatSession[]
+  auditLogs AuditLog[]
+  actions   Action[]
+  feedbacks Feedback[]
 
   @@map("tenants")
 }
@@ -83,16 +84,17 @@ model KnowledgeBase {
 }
 
 model ChatSession {
-  id             String   @id @default(uuid())
-  tenantId       String   @map("tenant_id")
-  externalUserId String?  @map("external_user_id")
-  startedAt      DateTime @default(now()) @map("started_at")
+  id             String    @id @default(uuid())
+  tenantId       String    @map("tenant_id")
+  externalUserId String?   @map("external_user_id")
+  startedAt      DateTime  @default(now()) @map("started_at")
   lastMessageAt  DateTime? @map("last_message_at")
-  metadata       Json     @default("{}")
+  metadata       Json      @default("{}")
 
   tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   messages      Message[]
   confirmations Confirmation[]
+  feedbacks     Feedback[]
 
   @@map("chat_sessions")
 }
@@ -106,7 +108,7 @@ model Message {
   toolResult Json?    @map("tool_result")
   createdAt  DateTime @default(now()) @map("created_at")
 
-  session      ChatSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session      ChatSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   confirmation Confirmation?
 
   @@map("messages")
@@ -134,10 +136,10 @@ model Confirmation {
 model Action {
   id           String   @id @default(uuid())
   tenantId     String   @map("tenant_id")
-  name         String   // e.g., "create_order", "check_status"
-  description  String   // What this action does (sent to AI as tool description)
+  name         String // e.g., "create_order", "check_status"
+  description  String // What this action does (sent to AI as tool description)
   webhookUrl   String   @map("webhook_url") // URL to POST to
-  headers      Json?    // Optional headers
+  headers      Json? // Optional headers
   bodyTemplate Json?    @map("body_template") // Template for request body
   enabled      Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at")
@@ -159,4 +161,20 @@ model AuditLog {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("audit_logs")
+}
+
+model Feedback {
+  id         String   @id @default(uuid())
+  sessionId  String   @map("session_id")
+  tenantId   String   @map("tenant_id")
+  rating     Int // 1-5 for conversation, 1 or -1 for thumbs
+  comment    String?
+  messageIdx Int?     @map("message_idx")
+  type       String   @default("conversation") // "conversation" or "message"
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("feedback")
 }

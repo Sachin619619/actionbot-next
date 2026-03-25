@@ -39,6 +39,8 @@
   let welcomeMsg = "Hi! How can I help you?";
   let welcomeShown = false;
   let chatHistory = []; // in-memory message log for export
+  let messageCount = 0; // total messages for rating prompt trigger
+  let conversationRated = false; // prevent showing rating prompt twice
 
   // ─── Detect Logged-in User (Supabase) ─────────────────
   function getLoggedInUser() {
@@ -483,6 +485,72 @@
       font-size:9.5px;color:#a1a1aa;background:#fff;flex-shrink:0;
     }
     .foot a{color:#71717a;text-decoration:none;font-weight:500}
+
+    /* === MESSAGE FEEDBACK (thumbs) === */
+    .msg-feedback{
+      display:flex;gap:2px;margin-top:4px;opacity:0;
+      transition:opacity .15s;
+    }
+    .msg-group.bot:hover .msg-feedback{opacity:1}
+    .msg-feedback.voted{opacity:1}
+    .fb-btn{
+      background:none;border:none;cursor:pointer;padding:3px 4px;
+      border-radius:4px;display:flex;align-items:center;justify-content:center;
+      transition:all .15s;color:#a1a1aa;
+    }
+    .fb-btn:hover{background:rgba(0,0,0,.05);color:#71717a}
+    .fb-btn svg{width:14px;height:14px}
+    .fb-btn.up-active{color:#22c55e}
+    .fb-btn.down-active{color:#ef4444}
+    .fb-btn.disabled{pointer-events:none;opacity:.5}
+
+    /* === CONVERSATION RATING OVERLAY === */
+    .rate-overlay{
+      position:absolute;top:0;left:0;right:0;bottom:0;
+      background:rgba(0,0,0,.4);z-index:20;
+      display:flex;align-items:center;justify-content:center;
+      animation:fadeIn .2s ease;
+    }
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .rate-card{
+      background:#fff;border-radius:14px;padding:20px;
+      width:calc(100% - 32px);max-width:320px;
+      box-shadow:0 8px 30px rgba(0,0,0,.15);
+      animation:fadeUp .25s ease;
+    }
+    .rate-title{
+      font-size:14px;font-weight:600;color:#18181b;
+      text-align:center;margin-bottom:14px;
+    }
+    .rate-stars{
+      display:flex;justify-content:center;gap:6px;margin-bottom:14px;
+    }
+    .rate-star{
+      background:none;border:none;cursor:pointer;padding:2px;
+      transition:transform .12s;color:#d4d4d8;
+    }
+    .rate-star:hover{transform:scale(1.15)}
+    .rate-star svg{width:28px;height:28px}
+    .rate-star.active{color:#f59e0b}
+    .rate-comment{
+      width:100%;border:1.5px solid #e4e4e7;border-radius:8px;
+      padding:8px 10px;font-size:12.5px;font-family:inherit;
+      resize:vertical;min-height:60px;max-height:120px;
+      outline:none;transition:border-color .15s;
+      margin-bottom:12px;
+    }
+    .rate-comment:focus{border-color:${THEME}}
+    .rate-comment::placeholder{color:#a1a1aa}
+    .rate-btns{display:flex;gap:8px;justify-content:flex-end}
+    .rate-btn{
+      padding:7px 16px;border-radius:8px;border:none;
+      font-size:12px;font-weight:600;cursor:pointer;
+      font-family:inherit;transition:all .12s;
+    }
+    .rate-btn:hover{opacity:.85}
+    .rate-btn.primary{background:${THEME};color:#fff}
+    .rate-btn.secondary{background:#f4f4f5;color:#71717a}
+    .rate-btn:disabled{opacity:.4;cursor:not-allowed}
   `;
   shadow.appendChild(css);
 
@@ -554,7 +622,13 @@
 
   // ─── Events ───────────────────────────────────────────────
   bbl.addEventListener("click", () => toggle(true));
-  hx.addEventListener("click", () => toggle(false));
+  hx.addEventListener("click", () => {
+    if (messageCount >= 3 && !conversationRated) {
+      showRatingPrompt();
+    } else {
+      toggle(false);
+    }
+  });
   snd.addEventListener("click", () => send());
   inp.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
 
@@ -781,6 +855,8 @@
     // Play notification sound if widget is minimized
     if (!isOpen) playNotificationSound();
     chatHistory.push({ role: "bot", text: text, time: Date.now() });
+    messageCount++;
+    const msgIdx = messageCount;
     const g = mk("div", "msg-group bot");
     const av = mk("div", "msg-av");
     av.textContent = botName.charAt(0).toUpperCase();
@@ -788,6 +864,42 @@
     const m = mk("div", "msg bot");
     m.innerHTML = fmtMd(text);
     col.appendChild(m);
+
+    // Thumbs up/down feedback
+    const fbWrap = mk("div", "msg-feedback");
+    const thumbUp = document.createElement("button");
+    thumbUp.className = "fb-btn";
+    thumbUp.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+    const thumbDown = document.createElement("button");
+    thumbDown.className = "fb-btn";
+    thumbDown.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>';
+
+    thumbUp.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (thumbUp.classList.contains("disabled")) return;
+      thumbUp.classList.add("up-active");
+      thumbDown.classList.remove("down-active");
+      thumbUp.classList.add("disabled");
+      thumbDown.classList.add("disabled");
+      fbWrap.classList.add("voted");
+      sendFeedback({ sessionId, messageIndex: msgIdx, rating: 1, type: "message" });
+    });
+
+    thumbDown.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (thumbDown.classList.contains("disabled")) return;
+      thumbDown.classList.add("down-active");
+      thumbUp.classList.remove("up-active");
+      thumbUp.classList.add("disabled");
+      thumbDown.classList.add("disabled");
+      fbWrap.classList.add("voted");
+      sendFeedback({ sessionId, messageIndex: msgIdx, rating: -1, type: "message" });
+    });
+
+    fbWrap.appendChild(thumbUp);
+    fbWrap.appendChild(thumbDown);
+    col.appendChild(fbWrap);
+
     g.appendChild(av);
     g.appendChild(col);
     msgs.appendChild(g);
@@ -796,6 +908,7 @@
 
   function addUser(text) {
     chatHistory.push({ role: "user", text: text, time: Date.now() });
+    messageCount++;
     const g = mk("div", "msg-group user");
     const col = mk("div", "msg-col");
     const m = mk("div", "msg user");
@@ -962,6 +1075,90 @@
       // Clean up context after sounds finish
       setTimeout(() => ctx.close(), 500);
     } catch(e) {}
+  }
+
+  // ─── Feedback ────────────────────────────────────────────
+  function sendFeedback(data) {
+    fetch(API_BASE + "/api/chat/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
+      body: JSON.stringify(data),
+    }).catch(e => console.error("ActionBot feedback error:", e));
+  }
+
+  function showRatingPrompt() {
+    // Remove existing overlay if any
+    const existing = shadow.querySelector(".rate-overlay");
+    if (existing) existing.remove();
+
+    const overlay = mk("div", "rate-overlay");
+    const card = mk("div", "rate-card");
+    let selectedRating = 0;
+
+    card.innerHTML =
+      '<div class="rate-title">Rate this conversation</div>' +
+      '<div class="rate-stars" id="rateStars">' +
+        [1,2,3,4,5].map(i =>
+          '<button class="rate-star" data-v="' + i + '">' +
+          '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' +
+          '</button>'
+        ).join("") +
+      '</div>' +
+      '<textarea class="rate-comment" placeholder="Any additional feedback? (optional)"></textarea>' +
+      '<div class="rate-btns">' +
+        '<button class="rate-btn secondary" id="rateSkip">Skip</button>' +
+        '<button class="rate-btn primary" id="rateSend" disabled>Submit</button>' +
+      '</div>';
+
+    overlay.appendChild(card);
+    win.appendChild(overlay);
+
+    const stars = card.querySelectorAll(".rate-star");
+    const sendBtn = card.querySelector("#rateSend");
+    const skipBtn = card.querySelector("#rateSkip");
+    const commentEl = card.querySelector(".rate-comment");
+
+    stars.forEach(s => {
+      s.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectedRating = parseInt(s.dataset.v);
+        stars.forEach((st, idx) => {
+          st.classList.toggle("active", idx < selectedRating);
+        });
+        sendBtn.disabled = false;
+      });
+    });
+
+    skipBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      conversationRated = true;
+      overlay.remove();
+      toggle(false);
+    });
+
+    sendBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!selectedRating) return;
+      sendBtn.disabled = true;
+      sendFeedback({
+        sessionId,
+        rating: selectedRating,
+        comment: commentEl.value.trim() || null,
+        type: "conversation",
+      });
+      conversationRated = true;
+      overlay.remove();
+      toggle(false);
+    });
+
+    // Click overlay background to dismiss
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        conversationRated = true;
+        overlay.remove();
+        toggle(false);
+      }
+    });
   }
 
   // ─── Helpers ──────────────────────────────────────────────

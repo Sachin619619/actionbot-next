@@ -69,10 +69,30 @@ export const admin = {
     request(`/admin/knowledge/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteKnowledge: (id: string) =>
     request(`/admin/knowledge/${id}`, { method: "DELETE" }),
-  getSessions: () => request("/admin/sessions"),
+  getSessions: (params?: { page?: number; limit?: number; search?: string; status?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.search) qs.set("search", params.search);
+    if (params?.status) qs.set("status", params.status);
+    const query = qs.toString();
+    return request(`/admin/sessions${query ? `?${query}` : ""}`);
+  },
+  getSession: (id: string) => request(`/admin/sessions/${id}`),
   getSessionMessages: (id: string) => request(`/admin/sessions/${id}/messages`),
   getLogs: () => request("/admin/logs"),
   getWidgetCode: () => request("/admin/widget-code"),
+};
+
+export const actions = {
+  list: () => request("/actions"),
+  get: (id: string) => request(`/actions/${id}`),
+  create: (data: any) =>
+    request("/actions", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) =>
+    request(`/actions/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    request(`/actions/${id}`, { method: "DELETE" }),
 };
 
 export const settings = {

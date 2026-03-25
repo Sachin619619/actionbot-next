@@ -6,13 +6,14 @@ import { clearToken } from "@/lib/api";
 import {
   LayoutDashboard, Bot, Wrench, BookOpen,
   MessageSquare, Code, LogOut, Menu, X,
-  BarChart3, Settings,
+  BarChart3, Settings, Zap,
 } from "lucide-react";
 
 const NAV = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/dashboard/bot", label: "Bot Config", icon: Bot },
   { path: "/dashboard/tools", label: "Tools", icon: Wrench },
+  { path: "/dashboard/actions", label: "Actions", icon: Zap },
   { path: "/dashboard/knowledge", label: "Knowledge", icon: BookOpen },
   { path: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { path: "/dashboard/sessions", label: "Chat Logs", icon: MessageSquare },
