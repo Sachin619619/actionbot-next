@@ -22,6 +22,7 @@ model Tenant {
   knowledge    KnowledgeBase[]
   sessions     ChatSession[]
   auditLogs    AuditLog[]
+  actions      Action[]
 
   @@map("tenants")
 }
@@ -37,6 +38,8 @@ model BotConfig {
   model          String   @default("MiniMax-M2.7-highspeed")
   maxTokens      Int      @default(1024) @map("max_tokens")
   quickReplies   String[] @default([]) @map("quick_replies")
+  themeColor     String   @default("#e85d04") @map("theme_color")
+  darkMode       Boolean  @default(false) @map("dark_mode")
   createdAt      DateTime @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -126,6 +129,23 @@ model Confirmation {
   tool    Tool        @relation(fields: [toolId], references: [id])
 
   @@map("confirmations")
+}
+
+model Action {
+  id           String   @id @default(uuid())
+  tenantId     String   @map("tenant_id")
+  name         String   // e.g., "create_order", "check_status"
+  description  String   // What this action does (sent to AI as tool description)
+  webhookUrl   String   @map("webhook_url") // URL to POST to
+  headers      Json?    // Optional headers
+  bodyTemplate Json?    @map("body_template") // Template for request body
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("actions")
 }
 
 model AuditLog {

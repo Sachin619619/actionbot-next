@@ -1,8 +1,8 @@
 import OpenAI from "openai";
 import { prisma } from "@/lib/db";
-import { buildSystemPrompt, buildTools, buildMessageHistory } from "./prompt-builder";
-import { executeTool } from "./tool-executor";
-import type { Tool } from "@prisma/client";
+import { buildSystemPrompt, buildTools, buildActionTools, buildMessageHistory } from "./prompt-builder";
+import { executeTool, executeAction } from "./tool-executor";
+import type { Tool, Action } from "@prisma/client";
 
 function stripThinkTags(text: string): string {
   return text.replace(/<think>[\s\S]*?<\/think>\s*/g, "").trim();
@@ -33,9 +33,10 @@ export class AIOrchestrator {
   }
 
   async processMessage(sessionId: string, userMessage: string): Promise<OrchestratorResult> {
-    const [botConfig, tools, knowledge, history, session] = await Promise.all([
+    const [botConfig, tools, actions, knowledge, history, session] = await Promise.all([
       prisma.botConfig.findUnique({ where: { tenantId: this.tenantId } }),
       prisma.tool.findMany({ where: { tenantId: this.tenantId, isActive: true } }),
+      prisma.action.findMany({ where: { tenantId: this.tenantId, enabled: true } }),
       prisma.knowledgeBase.findMany({ where: { tenantId: this.tenantId, isActive: true } }),
       prisma.message.findMany({ where: { sessionId }, orderBy: { createdAt: "asc" }, take: 40 }),
       prisma.chatSession.findUnique({ where: { id: sessionId } }),
@@ -49,8 +50,8 @@ export class AIOrchestrator {
     await prisma.chatSession.update({ where: { id: sessionId }, data: { lastMessageAt: new Date() } });
 
     const sessionMetadata = (session?.metadata as Record<string, any>) || undefined;
-    const systemPrompt = buildSystemPrompt(botConfig, knowledge, sessionMetadata);
-    const openaiTools = buildTools(tools);
+    const systemPrompt = buildSystemPrompt(botConfig, knowledge, sessionMetadata, actions);
+    const openaiTools = [...buildTools(tools), ...buildActionTools(actions)];
     const messages = buildMessageHistory(history);
     messages.push({ role: "user", content: userMessage });
 
@@ -79,8 +80,9 @@ export class AIOrchestrator {
 
       const toolCall = toolCalls[0] as any;
       const toolDb = tools.find((t) => t.name === toolCall.function.name);
+      const actionDb = !toolDb ? actions.find((a) => `action_${a.name}` === toolCall.function.name) : null;
 
-      if (!toolDb) {
+      if (!toolDb && !actionDb) {
         messages.push({ role: "assistant", content: textContent || null, tool_calls: toolCalls } as any);
         messages.push({ role: "tool", tool_call_id: toolCall.id, content: JSON.stringify({ error: `Tool "${toolCall.function.name}" not found` }) } as any);
         continue;
@@ -89,26 +91,46 @@ export class AIOrchestrator {
       let toolInput: Record<string, any>;
       try { toolInput = JSON.parse(toolCall.function.arguments); } catch { toolInput = {}; }
 
-      if (toolDb.isSensitive) {
-        const assistantMsg = await prisma.message.create({
+      // Handle action execution (webhook-based actions)
+      if (actionDb) {
+        await prisma.message.create({
           data: {
             sessionId, role: "assistant", content: textContent || null,
-            toolCall: { callId: toolCall.id, name: toolCall.function.name, input: toolInput, toolId: toolDb.id },
+            toolCall: { callId: toolCall.id, name: toolCall.function.name, input: toolInput },
           },
         });
 
-        const summary = this.buildActionSummary(toolDb, toolInput);
+        const { output, isError } = await executeAction(actionDb, toolInput);
+
+        await prisma.message.create({
+          data: { sessionId, role: "tool_result", toolResult: { callId: toolCall.id, output, isError } },
+        });
+
+        messages.push({ role: "assistant", content: textContent || null, tool_calls: toolCalls } as any);
+        messages.push({ role: "tool", tool_call_id: toolCall.id, content: JSON.stringify(output) } as any);
+        continue;
+      }
+
+      if (toolDb!.isSensitive) {
+        const assistantMsg = await prisma.message.create({
+          data: {
+            sessionId, role: "assistant", content: textContent || null,
+            toolCall: { callId: toolCall.id, name: toolCall.function.name, input: toolInput, toolId: toolDb!.id },
+          },
+        });
+
+        const summary = this.buildActionSummary(toolDb!, toolInput);
         const confirmation = await prisma.confirmation.create({
           data: {
-            messageId: assistantMsg.id, sessionId, toolId: toolDb.id, toolName: toolDb.name,
+            messageId: assistantMsg.id, sessionId, toolId: toolDb!.id, toolName: toolDb!.name,
             params: toolInput, summary, status: "pending",
           },
         });
 
         return {
           type: "confirmation_required",
-          content: textContent || `I'd like to execute **${toolDb.name}**. Please confirm.`,
-          confirmation: { id: confirmation.id, toolName: toolDb.name, params: toolInput, summary },
+          content: textContent || `I'd like to execute **${toolDb!.name}**. Please confirm.`,
+          confirmation: { id: confirmation.id, toolName: toolDb!.name, params: toolInput, summary },
           ...(pendingAttachments.length > 0 ? { attachments: pendingAttachments } : {}),
         };
       }
@@ -120,7 +142,7 @@ export class AIOrchestrator {
         },
       });
 
-      const { output, isError } = await executeTool(toolDb, toolInput);
+      const { output, isError } = await executeTool(toolDb!, toolInput);
 
       if (output && output._cards) {
         pendingAttachments.push(...output._cards);
@@ -178,9 +200,10 @@ export class AIOrchestrator {
   }
 
   private async continueConversation(sessionId: string): Promise<OrchestratorResult> {
-    const [botConfig, tools, knowledge, history, session] = await Promise.all([
+    const [botConfig, tools, actions, knowledge, history, session] = await Promise.all([
       prisma.botConfig.findUnique({ where: { tenantId: this.tenantId } }),
       prisma.tool.findMany({ where: { tenantId: this.tenantId, isActive: true } }),
+      prisma.action.findMany({ where: { tenantId: this.tenantId, enabled: true } }),
       prisma.knowledgeBase.findMany({ where: { tenantId: this.tenantId, isActive: true } }),
       prisma.message.findMany({ where: { sessionId }, orderBy: { createdAt: "asc" }, take: 40 }),
       prisma.chatSession.findUnique({ where: { id: sessionId } }),
@@ -189,8 +212,8 @@ export class AIOrchestrator {
     if (!botConfig) return { type: "error", content: "Bot not configured" };
 
     const sessionMetadata = (session?.metadata as Record<string, any>) || undefined;
-    const systemPrompt = buildSystemPrompt(botConfig, knowledge, sessionMetadata);
-    const openaiTools = buildTools(tools);
+    const systemPrompt = buildSystemPrompt(botConfig, knowledge, sessionMetadata, actions);
+    const openaiTools = [...buildTools(tools), ...buildActionTools(actions)];
     const messages = buildMessageHistory(history);
 
     // Extract attachments from the last tool_result in history

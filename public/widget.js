@@ -8,6 +8,30 @@
   const customCssUrl = scriptTag?.getAttribute("data-cards-css") || null;
   const userConfig = (typeof window !== "undefined" && window.actionbotConfig) || {};
 
+  // ─── i18n Translations ────────────────────────────────────
+  const i18n = {
+    en: { powered: "Powered by", placeholder: "Type a message...", send: "Send", download: "Download Chat", clear: "Clear Chat", online: "Online", confirm: "Confirm", cancel: "Cancel", actionReq: "Action Required", langLabel: "English" },
+    hi: { powered: "द्वारा संचालित", placeholder: "संदेश लिखें...", send: "भेजें", download: "चैट डाउनलोड करें", clear: "चैट साफ़ करें", online: "ऑनलाइन", confirm: "पुष्टि करें", cancel: "रद्द करें", actionReq: "कार्रवाई आवश्यक", langLabel: "हिन्दी" },
+    kn: { powered: "ಇವರಿಂದ ನಡೆಸಲ್ಪಡುತ್ತಿದೆ", placeholder: "ಸಂದೇಶ ಬರೆಯಿರಿ...", send: "ಕಳುಹಿಸಿ", download: "ಚಾಟ್ ಡೌನ್‌ಲೋಡ್", clear: "ಚಾಟ್ ಅಳಿಸಿ", online: "ಆನ್‌ಲೈನ್", confirm: "ದೃಢೀಕರಿಸಿ", cancel: "ರದ್ದುಮಾಡಿ", actionReq: "ಕ್ರಮ ಅಗತ್ಯ", langLabel: "ಕನ್ನಡ" },
+    ta: { powered: "வழங்குபவர்", placeholder: "செய்தி எழுதுங்கள்...", send: "அனுப்பு", download: "அரட்டை பதிவிறக்கம்", clear: "அரட்டை அழி", online: "ஆன்லைன்", confirm: "உறுதிப்படுத்து", cancel: "ரத்து செய்", actionReq: "நடவடிக்கை தேவை", langLabel: "தமிழ்" },
+    te: { powered: "అందించినది", placeholder: "సందేశం టైప్ చేయండి...", send: "పంపు", download: "చాట్ డౌన్‌లోడ్", clear: "చాట్ క్లియర్", online: "ఆన్‌లైన్", confirm: "నిర్ధారించు", cancel: "రద్దు", actionReq: "చర్య అవసరం", langLabel: "తెలుగు" },
+  };
+
+  // Detect language: data-lang attribute > navigator.language > 'en'
+  function detectLang() {
+    const attr = scriptTag?.getAttribute("data-lang");
+    if (attr && i18n[attr]) return attr;
+    const nav = (navigator.language || navigator.userLanguage || "en").toLowerCase();
+    if (nav.startsWith("hi")) return "hi";
+    if (nav.startsWith("kn")) return "kn";
+    if (nav.startsWith("ta")) return "ta";
+    if (nav.startsWith("te")) return "te";
+    return "en";
+  }
+
+  let currentLang = detectLang();
+  function t(key) { return (i18n[currentLang] || i18n.en)[key] || i18n.en[key] || key; }
+
   let sessionId = localStorage.getItem(`actionbot_session_${API_KEY}`) || null;
   let isOpen = false;
   let isLoading = false;
@@ -190,6 +214,43 @@
     .menu-item svg{width:15px;height:15px;flex-shrink:0;color:#71717a}
     .menu-item.danger{color:#dc2626}
     .menu-item.danger svg{color:#dc2626}
+
+    /* === LANGUAGE SWITCHER === */
+    .hdr-lang{
+      background:rgba(255,255,255,.12);border:none;color:#fff;
+      width:30px;height:30px;border-radius:8px;
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;transition:background .15s;flex-shrink:0;
+      position:relative;
+    }
+    .hdr-lang:hover{background:rgba(255,255,255,.22)}
+    .hdr-lang>svg{width:16px;height:16px}
+    .lang-drop{
+      position:absolute;top:calc(100% + 6px);right:0;
+      min-width:130px;
+      background:#fff;border-radius:12px;
+      box-shadow:0 8px 30px rgba(0,0,0,.15),0 0 0 1px rgba(0,0,0,.04);
+      opacity:0;transform:scale(.92) translateY(-4px);
+      pointer-events:none;
+      transition:all .18s cubic-bezier(.4,0,.2,1);
+      z-index:10;overflow:hidden;
+    }
+    .lang-drop.show{
+      opacity:1;transform:none;pointer-events:auto;
+    }
+    .lang-item{
+      display:flex;align-items:center;gap:8px;
+      width:100%;padding:10px 14px;
+      background:none;border:none;
+      font-size:12.5px;font-weight:500;
+      color:#3f3f46;cursor:pointer;
+      font-family:inherit;
+      transition:background .12s;
+    }
+    .lang-item:hover{background:#f4f4f5}
+    .lang-item:active{background:#e4e4e7}
+    .lang-item+.lang-item{border-top:1px solid #f0f0f0}
+    .lang-item.active{color:${THEME};font-weight:600}
 
     /* === MESSAGES === */
     .msgs{
@@ -444,20 +505,24 @@
         <div class="hdr-av" id="hav">🏠</div>
         <div class="hdr-info">
           <div class="hdr-name" id="hname">AI Assistant</div>
-          <div class="hdr-stat">Online</div>
+          <div class="hdr-stat" id="hstat">Online</div>
         </div>
         <button class="hdr-menu" id="hmenu">
           <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
           <div class="menu-drop" id="menuDrop">
             <button class="menu-item" id="menuDownload">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download Chat
+              <span id="menuDownloadTxt">Download Chat</span>
             </button>
             <button class="menu-item danger" id="menuClear">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              Clear Chat
+              <span id="menuClearTxt">Clear Chat</span>
             </button>
           </div>
+        </button>
+        <button class="hdr-lang" id="hlang">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <div class="lang-drop" id="langDrop"></div>
         </button>
         <button class="hdr-x" id="hx">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -466,12 +531,12 @@
       <div class="msgs" id="msgs"></div>
       <div class="load-bar" id="lbar"></div>
       <div class="inp-wrap">
-        <input class="inp" id="inp" placeholder="Type a message..." autocomplete="off"/>
+        <input class="inp" id="inp" placeholder="" autocomplete="off"/>
         <button class="snd" id="snd">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
       </div>
-      <div class="foot">Powered by <a href="#">ActionBot</a></div>
+      <div class="foot" id="foot">Powered by <a href="#">ActionBot</a></div>
     </div>
   `;
   shadow.appendChild(root);
@@ -483,6 +548,9 @@
   const hname = $("hname"), lbar = $("lbar");
   const hmenu = $("hmenu"), menuDrop = $("menuDrop");
   const menuDownload = $("menuDownload"), menuClear = $("menuClear");
+  const hlang = $("hlang"), langDrop = $("langDrop");
+  const hstat = $("hstat"), foot = $("foot");
+  const menuDownloadTxt = $("menuDownloadTxt"), menuClearTxt = $("menuClearTxt");
 
   // ─── Events ───────────────────────────────────────────────
   bbl.addEventListener("click", () => toggle(true));
@@ -494,6 +562,7 @@
   hmenu.addEventListener("click", (e) => {
     e.stopPropagation();
     menuDrop.classList.toggle("show");
+    langDrop.classList.remove("show");
   });
 
   menuDownload.addEventListener("click", (e) => {
@@ -508,14 +577,52 @@
     menuDrop.classList.remove("show");
   });
 
-  // Close dropdown when clicking outside
-  document.addEventListener("click", () => {
+  // ─── Language Switcher ───────────────────────────────────
+  function buildLangDropdown() {
+    langDrop.innerHTML = "";
+    for (const code of Object.keys(i18n)) {
+      const btn = document.createElement("button");
+      btn.className = "lang-item" + (code === currentLang ? " active" : "");
+      btn.textContent = i18n[code].langLabel;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        currentLang = code;
+        applyLang();
+        langDrop.classList.remove("show");
+        buildLangDropdown();
+      });
+      langDrop.appendChild(btn);
+    }
+  }
+  buildLangDropdown();
+
+  hlang.addEventListener("click", (e) => {
+    e.stopPropagation();
+    langDrop.classList.toggle("show");
     menuDrop.classList.remove("show");
   });
-  // Also close when clicking inside the shadow DOM but outside menu
+
+  function applyLang() {
+    inp.placeholder = t("placeholder");
+    hstat.textContent = t("online");
+    menuDownloadTxt.textContent = t("download");
+    menuClearTxt.textContent = t("clear");
+    foot.innerHTML = t("powered") + ' <a href="#">ActionBot</a>';
+  }
+  applyLang();
+
+  // Close dropdowns when clicking outside
+  document.addEventListener("click", () => {
+    menuDrop.classList.remove("show");
+    langDrop.classList.remove("show");
+  });
+  // Also close when clicking inside the shadow DOM but outside menu/lang
   root.addEventListener("click", (e) => {
     if (!hmenu.contains(e.target)) {
       menuDrop.classList.remove("show");
+    }
+    if (!hlang.contains(e.target)) {
+      langDrop.classList.remove("show");
     }
   });
 
@@ -525,8 +632,8 @@
     win.classList.toggle("open", open);
     if (open && !sessionId && !welcomeShown) initSession();
     if (open) setTimeout(() => inp.focus(), 100);
-    // Close menu when closing window
-    if (!open) menuDrop.classList.remove("show");
+    // Close dropdowns when closing window
+    if (!open) { menuDrop.classList.remove("show"); langDrop.classList.remove("show"); }
   }
 
   // ─── Download Chat ────────────────────────────────────────
@@ -793,11 +900,11 @@
 
   function addConfirm(c) {
     const el = mk("div", "confirm");
-    el.innerHTML = '<div class="confirm-t">\u26A1 Action Required</div>' +
+    el.innerHTML = '<div class="confirm-t">\u26A1 ' + esc(t("actionReq")) + '</div>' +
       '<div class="confirm-s">' + esc(c.summary || "Execute: " + c.toolName) + '</div>' +
       '<div class="confirm-btns">' +
-      '<button class="cbtn y" data-a="confirm">\u2713 Confirm</button>' +
-      '<button class="cbtn n" data-a="reject">\u2715 Cancel</button>' +
+      '<button class="cbtn y" data-a="confirm">\u2713 ' + esc(t("confirm")) + '</button>' +
+      '<button class="cbtn n" data-a="reject">\u2715 ' + esc(t("cancel")) + '</button>' +
       '</div>';
     msgs.appendChild(el);
     scroll();

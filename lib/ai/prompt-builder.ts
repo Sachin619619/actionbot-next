@@ -1,7 +1,7 @@
-import type { BotConfig, Tool, KnowledgeBase, Message } from "@prisma/client";
+import type { BotConfig, Tool, KnowledgeBase, Message, Action } from "@prisma/client";
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 
-export function buildSystemPrompt(botConfig: BotConfig, knowledge: KnowledgeBase[], sessionMetadata?: Record<string, any>): string {
+export function buildSystemPrompt(botConfig: BotConfig, knowledge: KnowledgeBase[], sessionMetadata?: Record<string, any>, actions?: Action[]): string {
   const parts: string[] = [botConfig.systemPrompt];
 
   if (knowledge.length > 0) {
@@ -29,6 +29,14 @@ export function buildSystemPrompt(botConfig: BotConfig, knowledge: KnowledgeBase
     }
   }
 
+  if (actions && actions.length > 0) {
+    parts.push("\n\n## Available Actions (Webhooks)");
+    parts.push("You can trigger the following actions. Each action calls an external webhook. Use the corresponding tool function (prefixed with 'action_') to execute them.");
+    for (const action of actions) {
+      parts.push(`- **action_${action.name}**: ${action.description}`);
+    }
+  }
+
   parts.push("\n\n## Instructions");
   parts.push("- Use the available tools to help the user accomplish tasks.");
   parts.push("- When calling a sensitive tool, explain what you're about to do before executing.");
@@ -44,6 +52,50 @@ export function buildTools(tools: Tool[]): ChatCompletionTool[] {
     type: "function" as const,
     function: { name: t.name, description: t.description, parameters: t.inputSchema as any },
   }));
+}
+
+export function buildActionTools(actions: Action[]): ChatCompletionTool[] {
+  return actions.filter((a) => a.enabled).map((a) => ({
+    type: "function" as const,
+    function: {
+      name: `action_${a.name}`,
+      description: a.description,
+      parameters: {
+        type: "object" as const,
+        properties: buildActionParameters(a.bodyTemplate as Record<string, any> | null),
+      },
+    },
+  }));
+}
+
+function buildActionParameters(bodyTemplate: Record<string, any> | null): Record<string, any> {
+  if (!bodyTemplate) {
+    return {
+      data: { type: "object", description: "Data to send with the action" },
+    };
+  }
+
+  const props: Record<string, any> = {};
+  extractTemplatePlaceholders(bodyTemplate, props);
+
+  if (Object.keys(props).length === 0) {
+    props.data = { type: "object", description: "Data to send with the action" };
+  }
+
+  return props;
+}
+
+function extractTemplatePlaceholders(template: Record<string, any>, props: Record<string, any>) {
+  for (const value of Object.values(template)) {
+    if (typeof value === "string") {
+      const matches = value.matchAll(/\{\{(\w+)\}\}/g);
+      for (const match of matches) {
+        props[match[1]] = { type: "string", description: `Value for ${match[1]}` };
+      }
+    } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      extractTemplatePlaceholders(value, props);
+    }
+  }
 }
 
 export function buildMessageHistory(messages: Message[]): ChatCompletionMessageParam[] {

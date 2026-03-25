@@ -16,7 +16,7 @@ export async function PUT(request: Request) {
   const tenant = await getAuthTenant(request);
   if (!tenant) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { name, avatarUrl, systemPrompt, personality, welcomeMessage, model, maxTokens } = await request.json();
+  const { name, avatarUrl, systemPrompt, personality, welcomeMessage, model, maxTokens, quickReplies, themeColor, darkMode } = await request.json();
 
   const config = await prisma.botConfig.update({
     where: { tenantId: tenant.id },
@@ -28,6 +28,9 @@ export async function PUT(request: Request) {
       ...(welcomeMessage !== undefined && { welcomeMessage }),
       ...(model !== undefined && { model }),
       ...(maxTokens !== undefined && { maxTokens }),
+      ...(quickReplies !== undefined && { quickReplies }),
+      ...(themeColor !== undefined && { themeColor }),
+      ...(darkMode !== undefined && { darkMode }),
     },
   });
 
