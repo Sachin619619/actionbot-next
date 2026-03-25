@@ -456,12 +456,12 @@ export default function LandingPage() {
           <div style={{ display: "flex", justifyContent: "center", gap: 20, flexWrap: "wrap" }}>
             {[
               {
-                name: "Starter", price: "₹999", period: "/mo", popular: false,
+                name: "Starter", price: "₹399", period: "/mo", popular: false,
                 features: ["1,000 messages/month", "1 bot", "Website widget", "Basic analytics", "Email support"],
                 cta: "Get Started", ctaLink: "/signup",
               },
               {
-                name: "Growth", price: "₹999", period: "/mo", popular: true,
+                name: "Growth", price: "₹699", period: "/mo", popular: true,
                 features: ["10,000 messages/month", "Unlimited bots", "All channels (WhatsApp, Telegram, Slack)", "Webhook actions & tools", "Advanced analytics", "Priority support"],
                 cta: "Start Free Trial", ctaLink: "/signup",
               },
