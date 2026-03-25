@@ -456,19 +456,19 @@ export default function LandingPage() {
           <div style={{ display: "flex", justifyContent: "center", gap: 20, flexWrap: "wrap" }}>
             {[
               {
-                name: "Free", price: "$0", period: "/mo", popular: false,
-                features: ["100 messages/month", "1 bot", "Website widget", "Basic analytics", "Community support"],
+                name: "Starter", price: "₹999", period: "/mo", popular: false,
+                features: ["1,000 messages/month", "1 bot", "Website widget", "Basic analytics", "Email support"],
                 cta: "Get Started", ctaLink: "/signup",
               },
               {
-                name: "Pro", price: "$29", period: "/mo", popular: true,
-                features: ["5,000 messages/month", "Unlimited bots", "All channels (WhatsApp, Telegram, Slack)", "Webhook actions & tools", "Advanced analytics", "Priority support"],
+                name: "Growth", price: "₹999", period: "/mo", popular: true,
+                features: ["10,000 messages/month", "Unlimited bots", "All channels (WhatsApp, Telegram, Slack)", "Webhook actions & tools", "Advanced analytics", "Priority support"],
                 cta: "Start Free Trial", ctaLink: "/signup",
               },
               {
-                name: "Enterprise", price: "Custom", period: "", popular: false,
+                name: "Enterprise", price: "₹999", period: "/mo", popular: false,
                 features: ["Unlimited messages", "Unlimited bots", "All channels", "Custom integrations", "SLA guarantee", "Dedicated support"],
-                cta: "Contact Sales", ctaLink: "mailto:hello@actionbot.app",
+                cta: "Get Started", ctaLink: "/signup",
               },
             ].map((plan, i) => (
               <div key={i} style={{
