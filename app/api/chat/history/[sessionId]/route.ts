@@ -26,5 +26,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ sess
     pendingConfirmations,
     botName: botConfig?.name || "AI Assistant",
     welcomeMessage: botConfig?.welcomeMessage || "",
+    quickReplies: botConfig?.quickReplies || [],
   });
 }

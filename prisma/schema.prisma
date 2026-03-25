@@ -36,6 +36,7 @@ model BotConfig {
   welcomeMessage String   @default("Hi! How can I help you today?") @map("welcome_message")
   model          String   @default("MiniMax-M2.7-highspeed")
   maxTokens      Int      @default(1024) @map("max_tokens")
+  quickReplies   String[] @default([]) @map("quick_replies")
   createdAt      DateTime @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)

@@ -13,6 +13,8 @@
   let isLoading = false;
   let botName = "AI Assistant";
   let welcomeMsg = "Hi! How can I help you?";
+  let welcomeShown = false;
+  let chatHistory = []; // in-memory message log for export
 
   // ─── Detect Logged-in User (Supabase) ─────────────────
   function getLoggedInUser() {
@@ -43,6 +45,43 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     *{margin:0;padding:0;box-sizing:border-box}
 
+    /* === CSS VARIABLES (light/dark) === */
+    :host{
+      --ab-win-bg:#fff;
+      --ab-msgs-bg:#f7f7f8;
+      --ab-bot-bg:#fff;
+      --ab-bot-color:#1a1a1a;
+      --ab-inp-bg:#fafafa;
+      --ab-inp-border:#e4e4e7;
+      --ab-inp-color:inherit;
+      --ab-inp-wrap-bg:#fff;
+      --ab-inp-wrap-border:#f0f0f0;
+      --ab-card-bg:#fff;
+      --ab-card-title:#18181b;
+      --ab-card-sub:#71717a;
+      --ab-foot-bg:#fff;
+      --ab-foot-color:#a1a1aa;
+      --ab-foot-link:#71717a;
+      --ab-confirm-bg:#fff;
+      --ab-confirm-summary-bg:#fafafa;
+      --ab-code-bg:rgba(0,0,0,.05);
+      --ab-scroll-thumb:#d4d4d8;
+      --ab-hdr-gradient:linear-gradient(#f7f7f8,transparent);
+      --ab-qr-bg:#fff;
+      --ab-qr-border:${THEME}25;
+      --ab-act-s-bg:#f4f4f5;
+      --ab-act-s-color:#3f3f46;
+      --ab-cbtn-n-bg:#f4f4f5;
+      --ab-cbtn-n-color:#71717a;
+      --ab-ts-user:rgba(0,0,0,0.3);
+      --ab-ts-bot:rgba(0,0,0,0.25);
+      --ab-typing-bg:#fff;
+      --ab-load-bg:#e4e4e7;
+      --ab-fld-label:#a1a1aa;
+      --ab-fld-value:#18181b;
+      --ab-msg-shadow:0 1px 2px rgba(0,0,0,.04);
+    }
+
     /* === BUBBLE === */
     .bubble{
       position:fixed;bottom:20px;right:20px;z-index:999999;
@@ -63,7 +102,7 @@
       position:fixed;bottom:20px;right:20px;z-index:999999;
       width:380px;height:min(620px,calc(100vh - 40px));
       border-radius:16px;overflow:hidden;
-      background:#fff;
+      background:var(--ab-win-bg);
       box-shadow:0 0 0 1px rgba(0,0,0,.04),0 8px 40px rgba(0,0,0,.12);
       display:flex;flex-direction:column;
       transform:scale(.92) translateY(20px);opacity:0;
@@ -86,7 +125,7 @@
     .hdr::after{
       content:'';position:absolute;bottom:-12px;left:0;right:0;
       height:12px;
-      background:linear-gradient(#f7f7f8,transparent);
+      background:var(--ab-hdr-gradient);
       z-index:1;pointer-events:none;
     }
     .hdr-av{
@@ -112,15 +151,55 @@
     .hdr-x:hover{background:rgba(255,255,255,.22)}
     .hdr-x svg{width:16px;height:16px}
 
+    /* === MENU BUTTON & DROPDOWN === */
+    .hdr-menu{
+      background:rgba(255,255,255,.12);border:none;color:#fff;
+      width:30px;height:30px;border-radius:8px;
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;transition:background .15s;flex-shrink:0;
+      position:relative;
+    }
+    .hdr-menu:hover{background:rgba(255,255,255,.22)}
+    .hdr-menu>svg{width:16px;height:16px}
+
+    .menu-drop{
+      position:absolute;top:calc(100% + 6px);right:0;
+      min-width:175px;
+      background:#fff;border-radius:12px;
+      box-shadow:0 8px 30px rgba(0,0,0,.15),0 0 0 1px rgba(0,0,0,.04);
+      opacity:0;transform:scale(.92) translateY(-4px);
+      pointer-events:none;
+      transition:all .18s cubic-bezier(.4,0,.2,1);
+      z-index:10;overflow:hidden;
+    }
+    .menu-drop.show{
+      opacity:1;transform:none;pointer-events:auto;
+    }
+    .menu-item{
+      display:flex;align-items:center;gap:10px;
+      width:100%;padding:11px 14px;
+      background:none;border:none;
+      font-size:12.5px;font-weight:500;
+      color:#3f3f46;cursor:pointer;
+      font-family:inherit;
+      transition:background .12s;
+    }
+    .menu-item:hover{background:#f4f4f5}
+    .menu-item:active{background:#e4e4e7}
+    .menu-item+.menu-item{border-top:1px solid #f0f0f0}
+    .menu-item svg{width:15px;height:15px;flex-shrink:0;color:#71717a}
+    .menu-item.danger{color:#dc2626}
+    .menu-item.danger svg{color:#dc2626}
+
     /* === MESSAGES === */
     .msgs{
       flex:1;overflow-y:auto;padding:16px 14px;
       display:flex;flex-direction:column;gap:6px;
-      background:#f7f7f8;
+      background:var(--ab-msgs-bg);
       scroll-behavior:smooth;
     }
     .msgs::-webkit-scrollbar{width:4px}
-    .msgs::-webkit-scrollbar-thumb{background:#d4d4d8;border-radius:4px}
+    .msgs::-webkit-scrollbar-thumb{background:var(--ab-scroll-thumb);border-radius:4px}
 
     /* bot avatar for groups */
     .msg-group{display:flex;gap:8px;align-items:flex-end;max-width:92%}
@@ -144,9 +223,9 @@
     @keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
     .msg.bot{
-      background:#fff;color:#1a1a1a;
+      background:var(--ab-bot-bg);color:var(--ab-bot-color);
       border-radius:4px 14px 14px 14px;
-      box-shadow:0 1px 2px rgba(0,0,0,.04);
+      box-shadow:var(--ab-msg-shadow);
     }
     .msg.bot:first-child{border-radius:14px 14px 14px 4px}
     .msg.user{
@@ -157,7 +236,7 @@
 
     .msg strong{font-weight:600}
     .msg code{
-      background:rgba(0,0,0,.05);padding:1px 4px;border-radius:3px;
+      background:var(--ab-code-bg);padding:1px 4px;border-radius:3px;
       font-size:12.5px;font-family:'SF Mono',Monaco,monospace;
     }
 
@@ -169,8 +248,8 @@
     }
     .qr{
       padding:7px 14px;border-radius:20px;
-      background:#fff;color:${THEME};
-      border:1.5px solid ${THEME}25;
+      background:var(--ab-qr-bg);color:${THEME};
+      border:1.5px solid var(--ab-qr-border);
       font-size:12px;font-weight:500;
       cursor:pointer;transition:all .15s;
       font-family:inherit;
@@ -187,7 +266,7 @@
       padding:4px 0;
     }
     .card{
-      background:#fff;border-radius:12px;overflow:hidden;
+      background:var(--ab-card-bg);border-radius:12px;overflow:hidden;
       box-shadow:0 1px 3px rgba(0,0,0,.06);
       transition:all .15s;
     }
@@ -197,8 +276,8 @@
       background:#f4f4f5;
     }
     .card-bd{padding:10px 12px 12px}
-    .card-t{font-size:13.5px;font-weight:600;color:#18181b;margin-bottom:2px}
-    .card-s{font-size:11px;color:#71717a;margin-bottom:6px}
+    .card-t{font-size:13.5px;font-weight:600;color:var(--ab-card-title);margin-bottom:2px}
+    .card-s{font-size:11px;color:var(--ab-card-sub);margin-bottom:6px}
 
     .card-badges{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px}
     .badge{
@@ -213,8 +292,8 @@
     .badge-gray{background:#f4f4f5;color:#3f3f46}
 
     .card-flds{display:flex;gap:12px;margin-bottom:10px}
-    .fld-l{font-size:9px;font-weight:600;color:#a1a1aa;text-transform:uppercase;letter-spacing:.3px}
-    .fld-v{font-size:12.5px;font-weight:600;color:#18181b}
+    .fld-l{font-size:9px;font-weight:600;color:var(--ab-fld-label);text-transform:uppercase;letter-spacing:.3px}
+    .fld-v{font-size:12.5px;font-weight:600;color:var(--ab-fld-value)}
 
     .card-acts{display:flex;gap:4px}
     .act{
@@ -226,7 +305,7 @@
     .act:hover{opacity:.85}
     .act:active{transform:scale(.97)}
     .act-p{background:${THEME};color:#fff}
-    .act-s{background:#f4f4f5;color:#3f3f46}
+    .act-s{background:var(--ab-act-s-bg);color:var(--ab-act-s-color)}
     .act-g{background:#059669;color:#fff}
 
     /* === AUTO-OPEN NAV BUTTON === */
@@ -249,7 +328,7 @@
 
     /* === CONFIRMATION === */
     .confirm{
-      background:#fff;border-radius:12px;
+      background:var(--ab-confirm-bg);border-radius:12px;
       border-left:3px solid ${THEME};
       padding:12px;max-width:92%;
       box-shadow:0 1px 3px rgba(0,0,0,.06);
@@ -259,7 +338,7 @@
     .confirm-t{font-size:12px;font-weight:600;color:${THEME};margin-bottom:6px}
     .confirm-s{
       font-size:12px;color:#52525b;margin-bottom:10px;
-      padding:8px 10px;background:#fafafa;border-radius:6px;
+      padding:8px 10px;background:var(--ab-confirm-summary-bg);border-radius:6px;
     }
     .confirm-btns{display:flex;gap:6px}
     .cbtn{
@@ -269,30 +348,39 @@
     }
     .cbtn:hover{opacity:.85}
     .cbtn.y{background:#059669;color:#fff}
-    .cbtn.n{background:#f4f4f5;color:#71717a}
+    .cbtn.n{background:var(--ab-cbtn-n-bg);color:var(--ab-cbtn-n-color)}
     .cbtn:disabled{opacity:.4;cursor:not-allowed}
 
     /* === TYPING === */
-    .typing{
-      display:none;align-items:center;gap:4px;
-      padding:10px 16px;background:#fff;
-      border-radius:4px 14px 14px 14px;
-      align-self:flex-start;
-      box-shadow:0 1px 2px rgba(0,0,0,.04);
-      margin-left:34px;
+    .typing-group{
+      display:none;align-items:flex-end;gap:8px;
+      align-self:flex-start;max-width:92%;
+      animation:fadeUp .2s ease;
     }
-    .typing.on{display:flex}
+    .typing-group.on{display:flex}
+    .typing-group .msg-av{
+      width:26px;height:26px;border-radius:8px;
+      background:${THEME};color:#fff;
+      display:flex;align-items:center;justify-content:center;
+      font-size:11px;flex-shrink:0;font-weight:600;
+    }
+    .typing{
+      display:flex;align-items:center;gap:5px;
+      padding:10px 16px;background:var(--ab-typing-bg);
+      border-radius:4px 14px 14px 14px;
+      box-shadow:0 1px 2px rgba(0,0,0,.04);
+    }
     .dot{
-      width:5px;height:5px;background:#a1a1aa;
+      width:6px;height:6px;background:#a1a1aa;
       border-radius:50%;animation:boing 1.4s infinite;
     }
     .dot:nth-child(2){animation-delay:.15s}
     .dot:nth-child(3){animation-delay:.3s}
-    @keyframes boing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+    @keyframes boing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
 
     /* === LOADING BAR === */
     .load-bar{
-      height:2px;background:#e4e4e7;
+      height:2px;background:var(--ab-load-bg);
       position:relative;overflow:hidden;
       display:none;flex-shrink:0;
     }
@@ -358,6 +446,19 @@
           <div class="hdr-name" id="hname">AI Assistant</div>
           <div class="hdr-stat">Online</div>
         </div>
+        <button class="hdr-menu" id="hmenu">
+          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+          <div class="menu-drop" id="menuDrop">
+            <button class="menu-item" id="menuDownload">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download Chat
+            </button>
+            <button class="menu-item danger" id="menuClear">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Clear Chat
+            </button>
+          </div>
+        </button>
         <button class="hdr-x" id="hx">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
@@ -380,6 +481,8 @@
   const bbl = $("bbl"), win = $("win"), hx = $("hx");
   const msgs = $("msgs"), inp = $("inp"), snd = $("snd");
   const hname = $("hname"), lbar = $("lbar");
+  const hmenu = $("hmenu"), menuDrop = $("menuDrop");
+  const menuDownload = $("menuDownload"), menuClear = $("menuClear");
 
   // ─── Events ───────────────────────────────────────────────
   bbl.addEventListener("click", () => toggle(true));
@@ -387,31 +490,111 @@
   snd.addEventListener("click", () => send());
   inp.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
 
+  // ─── Menu Events ──────────────────────────────────────────
+  hmenu.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menuDrop.classList.toggle("show");
+  });
+
+  menuDownload.addEventListener("click", (e) => {
+    e.stopPropagation();
+    downloadChat();
+    menuDrop.classList.remove("show");
+  });
+
+  menuClear.addEventListener("click", (e) => {
+    e.stopPropagation();
+    clearChat();
+    menuDrop.classList.remove("show");
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", () => {
+    menuDrop.classList.remove("show");
+  });
+  // Also close when clicking inside the shadow DOM but outside menu
+  root.addEventListener("click", (e) => {
+    if (!hmenu.contains(e.target)) {
+      menuDrop.classList.remove("show");
+    }
+  });
+
   function toggle(open) {
     isOpen = open;
     bbl.classList.toggle("hide", open);
     win.classList.toggle("open", open);
-    if (open && !sessionId) initSession();
+    if (open && !sessionId && !welcomeShown) initSession();
     if (open) setTimeout(() => inp.focus(), 100);
+    // Close menu when closing window
+    if (!open) menuDrop.classList.remove("show");
+  }
+
+  // ─── Download Chat ────────────────────────────────────────
+  function downloadChat() {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const fileDate = now.toISOString().slice(0, 10);
+
+    let content = "Chat with " + botName + "\n";
+    content += "Exported on " + dateStr + "\n";
+    content += "========================\n\n";
+
+    if (chatHistory.length === 0) {
+      content += "(No messages)\n";
+    } else {
+      for (const entry of chatHistory) {
+        const time = new Date(entry.time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+        const sender = entry.role === "user" ? "You" : botName;
+        content += "[" + time + "] " + sender + ": " + entry.text + "\n";
+      }
+    }
+
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const safeName = botName.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
+    a.download = "chat-" + safeName + "-" + fileDate + ".txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ─── Clear Chat ───────────────────────────────────────────
+  function clearChat() {
+    // Remove session from storage
+    localStorage.removeItem("actionbot_session_" + API_KEY);
+    sessionId = null;
+    welcomeShown = false;
+    chatHistory = [];
+
+    // Clear all message elements
+    msgs.innerHTML = "";
+
+    // Re-init session to show fresh welcome
+    initSession();
   }
 
   // ─── Session ──────────────────────────────────────────────
   async function initSession() {
     try {
-      const r = await fetch(`${API_BASE}/api/chat/session`, {
+      const r = await fetch(API_BASE + "/api/chat/session", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
         body: JSON.stringify({ apiKey: API_KEY, externalUserId: userConfig.externalUserId, metadata: userConfig.metadata }),
       });
       const d = await r.json();
       sessionId = d.sessionId;
-      localStorage.setItem(`actionbot_session_${API_KEY}`, sessionId);
+      localStorage.setItem("actionbot_session_" + API_KEY, sessionId);
       botName = d.botName || "AI Assistant";
       welcomeMsg = d.welcomeMessage || "Hi! How can I help you?";
       hname.textContent = botName;
-      addBot(welcomeMsg);
-      // Quick reply suggestions
-      showQuickReplies(["Show PGs in Koramangala", "Budget PGs under ₹10k", "PGs with AC & WiFi"]);
+      if (!welcomeShown) {
+        welcomeShown = true;
+        addBot(welcomeMsg);
+        if (d.quickReplies?.length) showQuickReplies(d.quickReplies);
+      }
     } catch (e) {
       console.error("ActionBot init error:", e);
       addBot("Sorry, I'm having trouble connecting. Please try again later.");
@@ -429,14 +612,14 @@
     setLoading(true);
     try {
       if (!sessionId) await initSession();
-      const r = await fetch(`${API_BASE}/api/chat/message`, {
+      const r = await fetch(API_BASE + "/api/chat/message", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
         body: JSON.stringify({ message: text, sessionId, userContext: getLoggedInUser() }),
       });
       const d = await r.json();
       sessionId = d.sessionId;
-      localStorage.setItem(`actionbot_session_${API_KEY}`, sessionId);
+      localStorage.setItem("actionbot_session_" + API_KEY, sessionId);
 
       if (d.type === "confirmation_required") {
         if (d.content) addBot(d.content);
@@ -461,7 +644,7 @@
     btns.forEach(b => b.disabled = true);
     setLoading(true);
     try {
-      const r = await fetch(`${API_BASE}/api/chat/confirm/${id}`, {
+      const r = await fetch(API_BASE + "/api/chat/confirm/" + id, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
         body: JSON.stringify({ action, sessionId }),
@@ -488,6 +671,9 @@
   // ─── Renderers ────────────────────────────────────────────
   function addBot(text) {
     if (!text) return;
+    // Play notification sound if widget is minimized
+    if (!isOpen) playNotificationSound();
+    chatHistory.push({ role: "bot", text: text, time: Date.now() });
     const g = mk("div", "msg-group bot");
     const av = mk("div", "msg-av");
     av.textContent = botName.charAt(0).toUpperCase();
@@ -502,6 +688,7 @@
   }
 
   function addUser(text) {
+    chatHistory.push({ role: "user", text: text, time: Date.now() });
     const g = mk("div", "msg-group user");
     const col = mk("div", "msg-col");
     const m = mk("div", "msg user");
@@ -534,10 +721,10 @@
           if (a.action === "open_url" && a.payload?.url) {
             const btn = document.createElement("button");
             btn.className = "nav-btn";
-            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg><span>${esc(a.label || cd.title || "Open Page")}</span><span class="nav-arrow">\u203A</span>`;
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg><span>' + esc(a.label || cd.title || "Open Page") + '</span><span class="nav-arrow">\u203A</span>';
             btn.addEventListener("click", () => {
               window.open(a.payload.url, "_blank", "noopener");
-              btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span>Opened!</span>`;
+              btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span>Opened!</span>';
               btn.style.animation = "none";
               btn.style.opacity = "0.7";
             });
@@ -563,30 +750,30 @@
     const el = mk("div", "card");
     let h = "";
     if (d.image) {
-      h += `<img class="card-img" src="${esc(d.image)}" alt="${esc(d.title||'')}" loading="lazy"${d.url?' style="cursor:pointer"':''}/>`;
+      h += '<img class="card-img" src="' + esc(d.image) + '" alt="' + esc(d.title||'') + '" loading="lazy"' + (d.url?' style="cursor:pointer"':'') + '/>';
     }
-    h += `<div class="card-bd">`;
-    if (d.title) h += `<div class="card-t"${d.url?' style="cursor:pointer;color:'+THEME+'"':''}>${esc(d.title)}</div>`;
-    if (d.subtitle) h += `<div class="card-s">${esc(d.subtitle)}</div>`;
+    h += '<div class="card-bd">';
+    if (d.title) h += '<div class="card-t"' + (d.url?' style="cursor:pointer;color:'+THEME+'"':'') + '>' + esc(d.title) + '</div>';
+    if (d.subtitle) h += '<div class="card-s">' + esc(d.subtitle) + '</div>';
     if (d.badges?.length) {
-      h += `<div class="card-badges">`;
-      d.badges.forEach(b => { h += `<span class="badge badge-${b.color||'gray'}">${esc(b.text)}</span>`; });
-      h += `</div>`;
+      h += '<div class="card-badges">';
+      d.badges.forEach(b => { h += '<span class="badge badge-' + (b.color||'gray') + '">' + esc(b.text) + '</span>'; });
+      h += '</div>';
     }
     if (d.fields?.length) {
-      h += `<div class="card-flds">`;
-      d.fields.forEach(f => { h += `<div><div class="fld-l">${esc(f.label)}</div><div class="fld-v">${esc(f.value)}</div></div>`; });
-      h += `</div>`;
+      h += '<div class="card-flds">';
+      d.fields.forEach(f => { h += '<div><div class="fld-l">' + esc(f.label) + '</div><div class="fld-v">' + esc(f.value) + '</div></div>'; });
+      h += '</div>';
     }
     if (d.actions?.length) {
-      h += `<div class="card-acts">`;
+      h += '<div class="card-acts">';
       d.actions.forEach((a, i) => {
         const cls = a.style === "primary" ? "act-p" : a.style === "success" ? "act-g" : "act-s";
-        h += `<button class="act ${cls}" data-i="${i}">${esc(a.label)}</button>`;
+        h += '<button class="act ' + cls + '" data-i="' + i + '">' + esc(a.label) + '</button>';
       });
-      h += `</div>`;
+      h += '</div>';
     }
-    h += `</div>`;
+    h += '</div>';
     el.innerHTML = h;
     if (d.actions) {
       el.querySelectorAll(".act").forEach(b => {
@@ -606,13 +793,12 @@
 
   function addConfirm(c) {
     const el = mk("div", "confirm");
-    el.innerHTML = `
-      <div class="confirm-t">⚡ Action Required</div>
-      <div class="confirm-s">${esc(c.summary || "Execute: " + c.toolName)}</div>
-      <div class="confirm-btns">
-        <button class="cbtn y" data-a="confirm">✓ Confirm</button>
-        <button class="cbtn n" data-a="reject">✕ Cancel</button>
-      </div>`;
+    el.innerHTML = '<div class="confirm-t">\u26A1 Action Required</div>' +
+      '<div class="confirm-s">' + esc(c.summary || "Execute: " + c.toolName) + '</div>' +
+      '<div class="confirm-btns">' +
+      '<button class="cbtn y" data-a="confirm">\u2713 Confirm</button>' +
+      '<button class="cbtn n" data-a="reject">\u2715 Cancel</button>' +
+      '</div>';
     msgs.appendChild(el);
     scroll();
     const btns = el.querySelectorAll(".cbtn");
@@ -623,15 +809,52 @@
     isLoading = on;
     snd.disabled = on;
     lbar.classList.toggle("on", on);
-    let t = shadow.querySelector(".typing");
-    if (!t) {
-      t = mk("div", "typing");
-      t.innerHTML = `<div class="dot"></div><div class="dot"></div><div class="dot"></div>`;
+    let tg = shadow.querySelector(".typing-group");
+    if (!tg) {
+      tg = mk("div", "typing-group");
+      const av = mk("div", "msg-av");
+      av.textContent = botName.charAt(0).toUpperCase();
+      const t = mk("div", "typing");
+      t.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+      tg.appendChild(av);
+      tg.appendChild(t);
     }
     // Always move typing indicator to the bottom
-    if (on) msgs.appendChild(t);
-    t.classList.toggle("on", on);
+    if (on) msgs.appendChild(tg);
+    tg.classList.toggle("on", on);
     if (on) scroll();
+  }
+
+  // ─── Notification Sound (Web Audio API) ──────────────────
+  function playNotificationSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // First tone - A5 (880Hz)
+      const o1 = ctx.createOscillator();
+      const g1 = ctx.createGain();
+      o1.type = "sine";
+      o1.frequency.setValueAtTime(880, ctx.currentTime);
+      g1.gain.setValueAtTime(0.15, ctx.currentTime);
+      g1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      o1.connect(g1);
+      g1.connect(ctx.destination);
+      o1.start(ctx.currentTime);
+      o1.stop(ctx.currentTime + 0.15);
+      // Second tone - D6 (1174.66Hz), slightly delayed
+      const o2 = ctx.createOscillator();
+      const g2 = ctx.createGain();
+      o2.type = "sine";
+      o2.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.12);
+      g2.gain.setValueAtTime(0.001, ctx.currentTime);
+      g2.gain.setValueAtTime(0.15, ctx.currentTime + 0.12);
+      g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      o2.connect(g2);
+      g2.connect(ctx.destination);
+      o2.start(ctx.currentTime + 0.12);
+      o2.stop(ctx.currentTime + 0.3);
+      // Clean up context after sounds finish
+      setTimeout(() => ctx.close(), 500);
+    } catch(e) {}
   }
 
   // ─── Helpers ──────────────────────────────────────────────
@@ -650,7 +873,7 @@
       .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
       .replace(/\*(.+?)\*/g,"<em>$1</em>")
       .replace(/`(.+?)`/g,"<code>$1</code>")
-      .replace(/\n- /g,"\n• ")
+      .replace(/\n- /g,"\n\u2022 ")
       .replace(/\n(\d+)\. /g,"\n$1. ")
       .replace(/\n/g,"<br>");
     // Restore URLs as clickable links
@@ -663,14 +886,16 @@
 
   // ─── Restore Session ─────────────────────────────────────
   if (sessionId) {
-    fetch(`${API_BASE}/api/chat/history/${sessionId}`, { headers: { "X-API-Key": API_KEY } })
-      .then(r => r.json())
+    fetch(API_BASE + "/api/chat/history/" + sessionId, { headers: { "X-API-Key": API_KEY } })
+      .then(r => { if (!r.ok) throw new Error("Session expired"); return r.json(); })
       .then(d => {
         if (d.botName) {
           botName = d.botName;
           hname.textContent = botName;
         }
-        if (d.messages) {
+        if (d.welcomeMessage) welcomeMsg = d.welcomeMessage;
+        if (d.messages?.length) {
+          welcomeShown = true;
           for (const m of d.messages) {
             if (m.role === "user" && m.content) addUser(m.content);
             if (m.role === "assistant" && m.content) addBot(m.content);
@@ -680,6 +905,6 @@
           }
         }
       })
-      .catch(() => { sessionId = null; localStorage.removeItem(`actionbot_session_${API_KEY}`); });
+      .catch(() => { sessionId = null; localStorage.removeItem("actionbot_session_" + API_KEY); });
   }
 })();

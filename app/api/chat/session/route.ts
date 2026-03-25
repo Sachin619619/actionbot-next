@@ -23,5 +23,6 @@ export async function POST(request: Request) {
     welcomeMessage: botConfig?.welcomeMessage || "Hi! How can I help you?",
     botName: botConfig?.name || "AI Assistant",
     botAvatar: botConfig?.avatarUrl || null,
+    quickReplies: botConfig?.quickReplies || [],
   }, { status: 201 });
 }
