@@ -24,6 +24,7 @@ model Tenant {
   auditLogs AuditLog[]
   actions   Action[]
   feedbacks Feedback[]
+  channels  Channel[]
 
   @@map("tenants")
 }
@@ -148,6 +149,23 @@ model Action {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("actions")
+}
+
+model Channel {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  type      String   // "telegram", "whatsapp", "slack", "discord"
+  name      String   @default("")
+  config    Json     @default("{}") // bot token, webhook URL, phone number ID, etc.
+  isActive  Boolean  @default(true) @map("is_active")
+  webhookSecret String? @map("webhook_secret") // for verifying incoming webhooks
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, type])
+  @@map("channels")
 }
 
 model AuditLog {

@@ -23,5 +23,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: "/api/chat/:path*",
+  matcher: ["/api/chat/:path*", "/api/channels/:path*"],
 };

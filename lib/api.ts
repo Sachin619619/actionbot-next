@@ -95,6 +95,14 @@ export const actions = {
     request(`/actions/${id}`, { method: "DELETE" }),
 };
 
+export const channels = {
+  list: () => request("/admin/channels"),
+  upsert: (data: { type: string; name?: string; config: any; isActive?: boolean }) =>
+    request("/admin/channels", { method: "POST", body: JSON.stringify(data) }),
+  remove: (type: string) =>
+    request("/admin/channels", { method: "DELETE", body: JSON.stringify({ type }) }),
+};
+
 export const settings = {
   get: () => request("/settings"),
   update: (data: { name: string }) =>

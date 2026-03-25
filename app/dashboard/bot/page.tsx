@@ -81,7 +81,6 @@ export default function BotConfigPage() {
         systemPrompt: config.systemPrompt,
         personality: config.personality,
         welcomeMessage: config.welcomeMessage,
-        model: config.model,
         maxTokens: config.maxTokens,
         avatarUrl: config.avatarUrl,
         quickReplies: config.quickReplies,
@@ -244,15 +243,6 @@ export default function BotConfigPage() {
                   <option value="friendly">Friendly</option>
                   <option value="casual">Casual</option>
                   <option value="formal">Formal</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#1B1C15]/60 uppercase tracking-wider mb-2">AI Model</label>
-                <select value={config.model} onChange={(e) => update({ model: e.target.value })} className="premium-input">
-                  <option value="MiniMax-M2.7-highspeed">MiniMax M2.7 Highspeed</option>
-                  <option value="MiniMax-M2.5">MiniMax M2.5 (Best)</option>
-                  <option value="MiniMax-M2.5-lightning">MiniMax M2.5 Lightning</option>
-                  <option value="MiniMax-M2">MiniMax M2 (Agentic)</option>
                 </select>
               </div>
             </div>

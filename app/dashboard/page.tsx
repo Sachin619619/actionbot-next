@@ -182,10 +182,6 @@ export default function DashboardPage() {
               <p className="text-sm font-semibold text-gray-900">{botConfig?.name || "Loading..."}</p>
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1">Model</p>
-              <p className="text-sm text-gray-600">{botConfig?.model || "—"}</p>
-            </div>
-            <div>
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1">System Prompt</p>
               <p className="text-sm text-gray-500 leading-relaxed line-clamp-4 bg-gray-50 rounded-xl p-3 border border-gray-100">
                 {botConfig?.systemPrompt
