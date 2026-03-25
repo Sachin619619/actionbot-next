@@ -74,3 +74,11 @@ export const admin = {
   getLogs: () => request("/admin/logs"),
   getWidgetCode: () => request("/admin/widget-code"),
 };
+
+export const settings = {
+  get: () => request("/settings"),
+  update: (data: { name: string }) =>
+    request("/settings", { method: "PUT", body: JSON.stringify(data) }),
+  regenerateKey: () =>
+    request("/settings/regenerate-key", { method: "POST" }),
+};

@@ -14,6 +14,7 @@ const NAV = [
   { path: "/dashboard/bot", label: "Bot Config", icon: Bot },
   { path: "/dashboard/tools", label: "Tools", icon: Wrench },
   { path: "/dashboard/knowledge", label: "Knowledge", icon: BookOpen },
+  { path: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { path: "/dashboard/sessions", label: "Chat Logs", icon: MessageSquare },
   { path: "/dashboard/widget", label: "Widget", icon: Code },
 ];
