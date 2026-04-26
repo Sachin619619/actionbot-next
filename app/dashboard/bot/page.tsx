@@ -13,6 +13,29 @@ const EMOJI_OPTIONS = [
   "\u{1F308}", "\u{2764}\uFE0F", "\u{1F4E6}", "\u{1F3C6}", "\u{1F6E0}\uFE0F",
 ];
 
+const PROMPT_TEMPLATES = [
+  {
+    name: "Customer Support",
+    prompt: "You are a helpful customer support assistant for our company. Your responsibilities:\n- Answer questions about our products and services\n- Help users troubleshoot common issues\n- Escalate complex issues to human agents when needed\n- Be empathetic and solution-oriented\n\nTone: Professional yet friendly. Always be concise and helpful. If you don't know something, say so honestly rather than guessing.",
+  },
+  {
+    name: "E-Commerce Assistant",
+    prompt: "You are an AI shopping assistant. Help customers:\n- Find products based on their needs and preferences\n- Compare different options and make recommendations\n- Track orders and handle returns/exchanges\n- Apply discount codes and promotions\n\nAlways prioritize customer satisfaction. Suggest relevant products without being pushy. Include prices when discussing products.",
+  },
+  {
+    name: "Healthcare Receptionist",
+    prompt: "You are a healthcare reception assistant. You can:\n- Schedule, reschedule, and cancel appointments\n- Answer general questions about services and hours\n- Provide directions and parking information\n- Collect basic patient information\n\nIMPORTANT: Never provide medical advice. Always direct medical questions to qualified healthcare professionals. Be HIPAA-aware and protect patient privacy.",
+  },
+  {
+    name: "Restaurant Concierge",
+    prompt: "You are a restaurant AI assistant. Help customers:\n- Browse the menu and make recommendations\n- Take orders and customize items (allergies, preferences)\n- Handle reservations and table bookings\n- Answer questions about ingredients and preparation\n\nBe enthusiastic about food! Suggest popular items and pairings. Always confirm orders before finalizing.",
+  },
+  {
+    name: "SaaS Onboarding",
+    prompt: "You are an AI onboarding assistant for our SaaS platform. Help new users:\n- Get started with key features\n- Walk through setup steps\n- Answer FAQs about billing, plans, and features\n- Troubleshoot common integration issues\n\nBe encouraging and break complex tasks into simple steps. Use examples when possible. Direct users to documentation for advanced topics.",
+  },
+];
+
 const PRESET_COLORS = [
   "#e85d04", "#2563eb", "#7c3aed", "#059669", "#dc2626",
   "#d97706", "#0891b2", "#be185d", "#4f46e5", "#1d4ed8",
@@ -213,10 +236,24 @@ export default function BotConfigPage() {
                 <h2 className="text-lg font-semibold text-[#1B1C15]">System Prompt</h2>
                 <p className="text-sm text-gray-500 mt-0.5">Define your AI&apos;s role, capabilities, and boundaries</p>
               </div>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#e85d04] bg-orange-50 hover:bg-orange-100 transition-colors">
-                <Sparkles size={14} />
-                Generate with AI
-              </button>
+              <div className="flex items-center gap-2">
+                <select
+                  onChange={(e) => {
+                    const tmpl = PROMPT_TEMPLATES.find((t) => t.name === e.target.value);
+                    if (tmpl && confirm(`Replace system prompt with "${tmpl.name}" template?`)) {
+                      update({ systemPrompt: tmpl.prompt });
+                    }
+                    e.target.value = "";
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 outline-none cursor-pointer"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Use Template...</option>
+                  {PROMPT_TEMPLATES.map((t) => (
+                    <option key={t.name} value={t.name}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <textarea

@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     where.OR = [
       { externalUserId: { contains: search, mode: "insensitive" } },
       { id: { contains: search, mode: "insensitive" } },
+      { messages: { some: { content: { contains: search, mode: "insensitive" } } } },
     ];
   }
 

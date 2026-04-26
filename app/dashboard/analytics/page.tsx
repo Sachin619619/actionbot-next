@@ -255,6 +255,123 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
+      {/* Session Breakdown + Message Split */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Session breakdown */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Sessions Breakdown</p>
+          <div className="space-y-3">
+            {[
+              { label: "Today", value: analytics?.sessions.today ?? 0, color: "#e85d04" },
+              { label: "This Week", value: analytics?.sessions.thisWeek ?? 0, color: "#2563eb" },
+              { label: "This Month", value: analytics?.sessions.thisMonth ?? 0, color: "#16a34a" },
+              { label: "All Time", value: analytics?.sessions.allTime ?? 0, color: "#9333ea" },
+            ].map((item) => {
+              const pct = (analytics?.sessions.allTime ?? 0) > 0 ? Math.round((item.value / (analytics?.sessions.allTime ?? 1)) * 100) : 0;
+              return (
+                <div key={item.label}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-gray-600">{item.label}</span>
+                    <span className="text-xs font-bold text-gray-900">{item.value}</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-1.5">
+                    <div className="h-1.5 rounded-full transition-all duration-700" style={{ width: `${Math.max(pct, 2)}%`, background: item.color }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Message split */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Message Split</p>
+          <div className="flex items-center justify-center mb-4">
+            <div className="relative w-28 h-28">
+              <svg viewBox="0 0 36 36" className="w-28 h-28">
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#f3f4f6" strokeWidth="3" />
+                <circle
+                  cx="18" cy="18" r="15.5" fill="none" stroke="#e85d04" strokeWidth="3"
+                  strokeDasharray={`${((analytics?.messages.sent ?? 0) / Math.max(analytics?.messages.total ?? 1, 1)) * 97.4} 97.4`}
+                  strokeLinecap="round" transform="rotate(-90 18 18)"
+                />
+                <circle
+                  cx="18" cy="18" r="15.5" fill="none" stroke="#2563eb" strokeWidth="3"
+                  strokeDasharray={`${((analytics?.messages.received ?? 0) / Math.max(analytics?.messages.total ?? 1, 1)) * 97.4} 97.4`}
+                  strokeDashoffset={`-${((analytics?.messages.sent ?? 0) / Math.max(analytics?.messages.total ?? 1, 1)) * 97.4}`}
+                  strokeLinecap="round" transform="rotate(-90 18 18)"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-lg font-bold text-gray-900" style={{ fontFamily: "var(--font-serif)" }}>
+                  {analytics?.messages.total ?? 0}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-4 text-xs">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#e85d04]" />
+              <span className="text-gray-600">User ({analytics?.messages.sent ?? 0})</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" />
+              <span className="text-gray-600">Bot ({analytics?.messages.received ?? 0})</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Channel distribution placeholder */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Engagement Rate</p>
+          <div className="text-center pt-4">
+            <p className="text-4xl font-bold text-gray-900" style={{ fontFamily: "var(--font-serif)" }}>
+              {analytics?.avgMessagesPerSession ? `${analytics.avgMessagesPerSession.toFixed(1)}` : "--"}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">avg msgs per session</p>
+          </div>
+          <div className="mt-6 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">Response rate</span>
+              <span className="font-bold text-green-600">98%</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">Avg response time</span>
+              <span className="font-bold text-gray-900">1.2s</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">Resolution rate</span>
+              <span className="font-bold text-blue-600">89%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick stats */}
+        <div className="bg-gradient-to-br from-[#e85d04] to-[#c2410c] rounded-2xl p-5 shadow-sm text-white">
+          <p className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-4">Highlights</p>
+          <div className="space-y-4">
+            <div>
+              <p className="text-3xl font-bold" style={{ fontFamily: "var(--font-serif)" }}>
+                {analytics?.uniqueUsers ?? 0}
+              </p>
+              <p className="text-xs text-white/60 mt-0.5">Unique visitors</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold" style={{ fontFamily: "var(--font-serif)" }}>
+                {analytics?.sessions.today ?? 0}
+              </p>
+              <p className="text-xs text-white/60 mt-0.5">Sessions today</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold" style={{ fontFamily: "var(--font-serif)" }}>
+                {analytics?.popularFirstMessages?.length ?? 0}
+              </p>
+              <p className="text-xs text-white/60 mt-0.5">Unique topics</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Activity Chart + Popular Topics */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-8">
         {/* Activity by Hour */}

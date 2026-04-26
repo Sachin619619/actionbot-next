@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { admin } from "@/lib/api";
 import {
   ArrowLeft, Bot, User, Clock, Calendar,
   Hash, Download, Mail, Wrench, Info,
-  MessageSquare, Copy, Check,
+  MessageSquare, Copy, Check, Send, UserCheck,
+  RefreshCw, Headphones,
 } from "lucide-react";
 
 function formatDuration(ms: number): string {
@@ -48,6 +49,25 @@ export default function SessionDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Human handoff state
+  const [handoffMode, setHandoffMode] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const loadSession = () => {
+    if (!sessionId) return;
+    admin
+      .getSession(sessionId)
+      .then((data) => {
+        setSession(data);
+        setError(null);
+      })
+      .catch((err: any) => setError(err.message || "Failed to load session"));
+  };
+
   useEffect(() => {
     if (!sessionId) return;
     setLoading(true);
@@ -57,6 +77,55 @@ export default function SessionDetailPage() {
       .catch((err: any) => setError(err.message || "Failed to load session"))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  // Auto-refresh when handoff mode is active
+  useEffect(() => {
+    if (!handoffMode || !autoRefresh) return;
+    const interval = setInterval(loadSession, 5000);
+    return () => clearInterval(interval);
+  }, [handoffMode, autoRefresh, sessionId]);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (handoffMode && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [session?.messages?.length, handoffMode]);
+
+  // Focus input when entering handoff mode
+  useEffect(() => {
+    if (handoffMode && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [handoffMode]);
+
+  const sendReply = async () => {
+    if (!replyText.trim() || sending) return;
+    setSending(true);
+    try {
+      const newMsg = await admin.replyToSession(sessionId, replyText.trim());
+      // Add new message to local state
+      setSession((prev: any) => ({
+        ...prev,
+        messages: [...prev.messages, newMsg],
+        messageCount: prev.messageCount + 1,
+        assistantMessageCount: prev.assistantMessageCount + 1,
+      }));
+      setReplyText("");
+      inputRef.current?.focus();
+    } catch (err: any) {
+      alert("Failed to send: " + (err.message || "Unknown error"));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendReply();
+    }
+  };
 
   const exportConversation = () => {
     if (!session) return;
@@ -75,12 +144,11 @@ export default function SessionDetailPage() {
 
     session.messages.forEach((msg: any) => {
       const time = formatTimestamp(msg.createdAt);
-      const role = msg.role === "user" ? "User" : msg.role === "assistant" ? "Bot" : msg.role;
+      const isHuman = msg.toolCall?._humanAgent;
+      const role = msg.role === "user" ? "User" : isHuman ? "Agent" : msg.role === "assistant" ? "Bot" : msg.role;
       lines.push(`[${time}] ${role}:`);
-      if (msg.content) {
-        lines.push(msg.content);
-      }
-      if (msg.toolCall) {
+      if (msg.content) lines.push(msg.content);
+      if (msg.toolCall && !isHuman) {
         lines.push(`  [Tool Call: ${(msg.toolCall as any).name || "unknown"}]`);
         lines.push(`  Params: ${JSON.stringify((msg.toolCall as any).arguments || msg.toolCall, null, 2)}`);
       }
@@ -96,6 +164,32 @@ export default function SessionDetailPage() {
     const a = document.createElement("a");
     a.href = url;
     a.download = `session-${session.id.slice(0, 8)}-transcript.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportJSON = () => {
+    if (!session) return;
+    const data = {
+      sessionId: session.id,
+      userId: session.externalUserId || "anonymous",
+      startedAt: session.startedAt,
+      endedAt: session.lastMessageAt,
+      messageCount: session.messageCount,
+      metadata: session.metadata,
+      messages: session.messages.map((msg: any) => ({
+        role: msg.role,
+        content: msg.content,
+        toolCall: msg.toolCall || undefined,
+        toolResult: msg.toolResult || undefined,
+        timestamp: msg.createdAt,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `session-${session.id.slice(0, 8)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -170,6 +264,12 @@ export default function SessionDetailPage() {
                 )}
                 {session.status === "active" ? "Active" : "Ended"}
               </span>
+              {handoffMode && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-600 border border-purple-100">
+                  <Headphones size={10} className="mr-1" />
+                  Live Takeover
+                </span>
+              )}
             </div>
             <button
               onClick={copySessionId}
@@ -180,13 +280,37 @@ export default function SessionDetailPage() {
             </button>
           </div>
 
-          <button
-            onClick={exportConversation}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[#e85d04] text-white hover:bg-[#d45304] shadow-sm transition-all duration-200 self-start"
-          >
-            <Download size={14} />
-            Export Transcript
-          </button>
+          <div className="flex items-center gap-2 self-start flex-wrap">
+            {/* Human Handoff Toggle */}
+            <button
+              onClick={() => {
+                setHandoffMode(!handoffMode);
+                if (!handoffMode) setAutoRefresh(true);
+              }}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                handoffMode
+                  ? "bg-purple-600 text-white hover:bg-purple-700 shadow-sm shadow-purple-200"
+                  : "bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200"
+              }`}
+            >
+              <Headphones size={14} />
+              {handoffMode ? "Exit Takeover" : "Take Over"}
+            </button>
+            <button
+              onClick={exportConversation}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[#e85d04] text-white hover:bg-[#d45304] shadow-sm transition-all duration-200"
+            >
+              <Download size={14} />
+              TXT
+            </button>
+            <button
+              onClick={exportJSON}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200"
+            >
+              <Download size={14} />
+              JSON
+            </button>
+          </div>
         </div>
 
         {/* Info grid */}
@@ -247,6 +371,37 @@ export default function SessionDetailPage() {
         )}
       </div>
 
+      {/* Handoff Info Banner */}
+      {handoffMode && (
+        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-4 mb-6 border border-purple-100 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+            <Headphones size={18} className="text-purple-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-purple-900">Live Chat Takeover Active</p>
+            <p className="text-xs text-purple-600">You're responding as a human agent. Messages appear as bot replies to the user.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadSession}
+              className="p-2 rounded-lg hover:bg-purple-100 transition-colors"
+              title="Refresh messages"
+            >
+              <RefreshCw size={14} className="text-purple-500" />
+            </button>
+            <label className="flex items-center gap-1.5 text-xs text-purple-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+              />
+              Auto-refresh
+            </label>
+          </div>
+        </div>
+      )}
+
       {/* Conversation Thread */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 sm:px-8 py-5 border-b border-gray-100">
@@ -266,7 +421,7 @@ export default function SessionDetailPage() {
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 space-y-4 max-h-[600px] overflow-y-auto">
+        <div className={`p-4 sm:p-6 space-y-4 overflow-y-auto ${handoffMode ? "max-h-[500px]" : "max-h-[600px]"}`}>
           {session.messages.length === 0 ? (
             <div className="text-center py-12">
               <MessageSquare size={32} className="mx-auto text-gray-300 mb-3" />
@@ -276,9 +431,9 @@ export default function SessionDetailPage() {
             session.messages.map((msg: any, index: number) => {
               const isUser = msg.role === "user";
               const isTool = msg.role === "tool_result" || msg.role === "tool";
+              const isHuman = msg.toolCall?._humanAgent;
               const isAssistant = msg.role === "assistant";
 
-              // Show date separator if day changes
               const prevMsg = index > 0 ? session.messages[index - 1] : null;
               const showDateSep =
                 !prevMsg ||
@@ -301,38 +456,49 @@ export default function SessionDetailPage() {
                   )}
 
                   <div className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
-                    {/* Bot/Tool avatar */}
                     {!isUser && (
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${
                           isTool
                             ? "bg-amber-50 border border-amber-100"
+                            : isHuman
+                            ? "bg-purple-50 border border-purple-100"
                             : "bg-orange-50 border border-orange-100"
                         }`}
                       >
                         {isTool ? (
                           <Wrench size={13} className="text-amber-500" />
+                        ) : isHuman ? (
+                          <UserCheck size={13} className="text-purple-600" />
                         ) : (
                           <Bot size={13} className="text-[#e85d04]" />
                         )}
                       </div>
                     )}
 
-                    {/* Message bubble */}
                     <div className={`max-w-[75%] sm:max-w-[70%] group`}>
+                      {/* Human agent badge */}
+                      {isHuman && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-600 mb-1">
+                          <UserCheck size={10} />
+                          Human Agent
+                        </span>
+                      )}
                       <div
                         className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                           isUser
                             ? "bg-[#1a1a1a] text-white rounded-br-md"
                             : isTool
                             ? "bg-amber-50 text-gray-800 border border-amber-100 rounded-bl-md"
+                            : isHuman
+                            ? "bg-purple-50 text-gray-800 border border-purple-200 rounded-bl-md"
                             : "bg-gray-50 text-gray-800 border border-gray-100 rounded-bl-md"
                         }`}
                       >
                         {msg.content && (
                           <p className="whitespace-pre-wrap">{msg.content}</p>
                         )}
-                        {msg.toolCall && (
+                        {msg.toolCall && !isHuman && (
                           <div className="mt-2">
                             <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                               <Wrench size={10} />
@@ -360,7 +526,6 @@ export default function SessionDetailPage() {
                           </div>
                         )}
                       </div>
-                      {/* Timestamp */}
                       <p
                         className={`text-[10px] text-gray-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${
                           isUser ? "text-right" : "text-left"
@@ -370,7 +535,6 @@ export default function SessionDetailPage() {
                       </p>
                     </div>
 
-                    {/* User avatar */}
                     {isUser && (
                       <div className="w-8 h-8 rounded-full bg-[#1a1a1a] flex items-center justify-center flex-shrink-0 mt-1">
                         <User size={13} className="text-white" />
@@ -381,7 +545,45 @@ export default function SessionDetailPage() {
               );
             })
           )}
+          <div ref={chatEndRef} />
         </div>
+
+        {/* Human reply input */}
+        {handoffMode && (
+          <div className="border-t border-gray-100 p-4 bg-gradient-to-r from-purple-50/50 to-white">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <UserCheck size={14} className="text-purple-600" />
+              </div>
+              <div className="flex-1 flex items-center gap-2 bg-white rounded-xl border border-purple-200 px-4 py-2 focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-100 transition-all">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Type a reply as human agent..."
+                  className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
+                  disabled={sending}
+                />
+                <button
+                  onClick={sendReply}
+                  disabled={!replyText.trim() || sending}
+                  className="p-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:hover:bg-purple-600 transition-colors"
+                >
+                  {sending ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Send size={14} />
+                  )}
+                </button>
+              </div>
+            </div>
+            <p className="text-[10px] text-purple-400 mt-2 ml-11">
+              Press Enter to send • Your message will appear to the user as a bot reply
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

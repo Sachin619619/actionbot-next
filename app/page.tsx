@@ -101,18 +101,18 @@ export default function LandingPage() {
   return (
     <div style={{ background: "#fafaf8", minHeight: "100vh" }}>
       {/* ─── NAV ─── */}
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(250,250,248,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,10,10,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64, padding: "0 24px" }}>
-          <a href="/" style={{ fontFamily: "var(--font-serif)", fontWeight: 700, fontSize: 22, color: "#1a1a1a", textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
+          <a href="/" style={{ fontFamily: "var(--font-serif)", fontWeight: 700, fontSize: 22, color: "#fff", textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ width: 32, height: 32, borderRadius: 10, background: "#e85d04", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#fff" }}>⚡</span>
             ActionBot
           </a>
           <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-            <a href="#features" style={navLinkStyle}>Features</a>
-            <a href="#live-demo" style={navLinkStyle}>Live Demo</a>
-            <a href="#channels" style={navLinkStyle}>Channels</a>
-            <a href="#pricing" style={navLinkStyle}>Pricing</a>
-            <a href="/login" style={{ ...navLinkStyle, fontWeight: 600 }}>Log In</a>
+            <a href="#features" style={darkNavLinkStyle}>Features</a>
+            <a href="#live-demo" style={darkNavLinkStyle}>Live Demo</a>
+            <a href="#channels" style={darkNavLinkStyle}>Channels</a>
+            <a href="#pricing" style={darkNavLinkStyle}>Pricing</a>
+            <a href="/login" style={{ ...darkNavLinkStyle, fontWeight: 600 }}>Log In</a>
             <a href="/signup" style={{ background: "#e85d04", color: "#fff", padding: "9px 20px", borderRadius: 12, fontSize: 14, fontWeight: 600, textDecoration: "none", transition: "transform 0.2s" }}>
               Start Free
             </a>
@@ -121,19 +121,33 @@ export default function LandingPage() {
       </nav>
 
       {/* ─── HERO ─── */}
-      <section style={{ paddingTop: 140, paddingBottom: 80, overflow: "hidden" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", textAlign: "center" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(232,93,4,0.08)", border: "1px solid rgba(232,93,4,0.15)", borderRadius: 100, padding: "6px 16px", fontSize: 13, fontWeight: 600, color: "#e85d04", marginBottom: 24 }}>
+      <section style={{ position: "relative", paddingTop: 140, paddingBottom: 80, overflow: "hidden", background: "#0a0a0a" }}>
+        {/* Background image */}
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: "url(/actionbot-bg.png)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          opacity: 0.6,
+        }} />
+        {/* Gradient overlay */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(to bottom, rgba(10,10,10,0.3) 0%, rgba(10,10,10,0.7) 60%, #0a0a0a 100%)",
+        }} />
+        <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", padding: "0 24px", textAlign: "center" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(232,93,4,0.15)", border: "1px solid rgba(232,93,4,0.25)", borderRadius: 100, padding: "6px 16px", fontSize: 13, fontWeight: 600, color: "#fb923c", marginBottom: 24 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#e85d04", animation: "pulse 2s infinite" }} />
             Now with WhatsApp, Telegram & Slack
           </div>
 
-          <h1 style={{ fontSize: "clamp(40px, 6vw, 68px)", lineHeight: 1.08, fontWeight: 800, color: "#1a1a1a", marginBottom: 20, fontFamily: "var(--font-serif)" }}>
+          <h1 style={{ fontSize: "clamp(40px, 6vw, 68px)", lineHeight: 1.08, fontWeight: 800, color: "#fff", marginBottom: 20, fontFamily: "var(--font-serif)" }}>
             Your AI Assistant,<br />
-            <span style={{ color: "#e85d04" }}>Everywhere</span>
+            <span style={{ color: "#fb923c" }}>Everywhere</span>
           </h1>
 
-          <p style={{ fontSize: 19, lineHeight: 1.6, color: "#666", maxWidth: 580, margin: "0 auto 32px" }}>
+          <p style={{ fontSize: 19, lineHeight: 1.6, color: "rgba(255,255,255,0.7)", maxWidth: 580, margin: "0 auto 32px" }}>
             Deploy an AI chatbot on your website, WhatsApp, Telegram & Slack — with tool calling, knowledge base, and analytics. One platform.
           </p>
 
@@ -141,12 +155,12 @@ export default function LandingPage() {
             <a href="/signup" style={{ background: "#e85d04", color: "#fff", padding: "15px 36px", borderRadius: 14, fontSize: 16, fontWeight: 600, textDecoration: "none", boxShadow: "0 4px 14px rgba(232,93,4,0.3)" }}>
               Start Free →
             </a>
-            <a href="#live-demo" style={{ background: "#fff", color: "#1a1a1a", padding: "15px 36px", borderRadius: 14, fontSize: 16, fontWeight: 600, textDecoration: "none", border: "1px solid #e0e0e0" }}>
+            <a href="#live-demo" style={{ background: "rgba(255,255,255,0.1)", backdropFilter: "blur(10px)", color: "#fff", padding: "15px 36px", borderRadius: 14, fontSize: 16, fontWeight: 600, textDecoration: "none", border: "1px solid rgba(255,255,255,0.15)" }}>
               Watch Demo
             </a>
           </div>
 
-          <p style={{ fontSize: 13, color: "#999", marginTop: 14 }}>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 14 }}>
             No credit card required · Free forever plan
           </p>
 
@@ -159,10 +173,10 @@ export default function LandingPage() {
               { num: 4, suffix: " Channels", label: "Integrated" },
             ].map((s, i) => (
               <div key={i} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: "#1a1a1a", fontFamily: "var(--font-serif)" }}>
+                <div style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontFamily: "var(--font-serif)" }}>
                   <AnimatedNumber target={s.num} suffix={s.suffix} />
                 </div>
-                <div style={{ fontSize: 12, color: "#999", fontWeight: 500, marginTop: 2 }}>{s.label}</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 500, marginTop: 2 }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -506,6 +520,74 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── WHY ACTIONBOT COMPARISON ─── */}
+      <section id="compare" style={{ padding: "80px 24px", background: "#fff" }}>
+        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#e85d04", textTransform: "uppercase", letterSpacing: 2, marginBottom: 8, display: "block" }}>
+              Why ActionBot?
+            </span>
+            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 800, color: "#111", marginBottom: 12, fontFamily: "var(--font-serif)" }}>
+              Compare with alternatives
+            </h2>
+            <p style={{ color: "#666", fontSize: 16, maxWidth: 600, margin: "0 auto" }}>
+              ActionBot gives you enterprise-grade AI automation at a fraction of the cost
+            </p>
+          </div>
+
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: "14px 16px", textAlign: "left", borderBottom: "2px solid #e5e7eb", color: "#9ca3af", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Feature</th>
+                  <th style={{ padding: "14px 16px", textAlign: "center", borderBottom: "2px solid #e85d04", color: "#e85d04", fontSize: 13, fontWeight: 700 }}>ActionBot</th>
+                  <th style={{ padding: "14px 16px", textAlign: "center", borderBottom: "2px solid #e5e7eb", color: "#9ca3af", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Intercom</th>
+                  <th style={{ padding: "14px 16px", textAlign: "center", borderBottom: "2px solid #e5e7eb", color: "#9ca3af", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Drift</th>
+                  <th style={{ padding: "14px 16px", textAlign: "center", borderBottom: "2px solid #e5e7eb", color: "#9ca3af", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Tidio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { feature: "AI-Powered Responses", actionbot: true, intercom: true, drift: true, tidio: true },
+                  { feature: "Custom Tool Calling (APIs)", actionbot: true, intercom: false, drift: false, tidio: false },
+                  { feature: "Multi-Channel (WhatsApp, Telegram, Slack)", actionbot: true, intercom: "partial", drift: false, tidio: "partial" },
+                  { feature: "Knowledge Base RAG", actionbot: true, intercom: true, drift: true, tidio: true },
+                  { feature: "Human Handoff / Live Takeover", actionbot: true, intercom: true, drift: true, tidio: true },
+                  { feature: "Webhook Actions", actionbot: true, intercom: false, drift: false, tidio: false },
+                  { feature: "Multi-Tenant / White-Label", actionbot: true, intercom: false, drift: false, tidio: false },
+                  { feature: "Custom Bot Personality", actionbot: true, intercom: "partial", drift: false, tidio: true },
+                  { feature: "Embeddable Widget", actionbot: true, intercom: true, drift: true, tidio: true },
+                  { feature: "Starting Price", actionbot: "₹399/mo", intercom: "$74/mo", drift: "$2,500/mo", tidio: "$29/mo" },
+                ].map((row, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                    <td style={{ padding: "13px 16px", color: "#374151", fontWeight: 500 }}>{row.feature}</td>
+                    {[row.actionbot, row.intercom, row.drift, row.tidio].map((val, j) => (
+                      <td key={j} style={{ padding: "13px 16px", textAlign: "center" }}>
+                        {val === true ? (
+                          <span style={{ color: j === 0 ? "#e85d04" : "#22c55e", fontSize: 18, fontWeight: 700 }}>✓</span>
+                        ) : val === false ? (
+                          <span style={{ color: "#d1d5db", fontSize: 18 }}>✕</span>
+                        ) : val === "partial" ? (
+                          <span style={{ color: "#f59e0b", fontSize: 12, fontWeight: 600 }}>Partial</span>
+                        ) : (
+                          <span style={{ color: j === 0 ? "#e85d04" : "#6b7280", fontSize: 13, fontWeight: j === 0 ? 700 : 500 }}>{val}</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ textAlign: "center", marginTop: 32 }}>
+            <p style={{ color: "#9ca3af", fontSize: 13 }}>
+              ActionBot is the only platform that combines AI chat, custom tool calling, webhook actions, and multi-channel support — all in one affordable package.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ─── FINAL CTA ─── */}
       <section style={{ padding: "80px 0", background: "linear-gradient(135deg, #e85d04 0%, #c2410c 100%)", textAlign: "center" }}>
         <div style={{ maxWidth: 600, margin: "0 auto", padding: "0 24px" }}>
@@ -566,4 +648,7 @@ export default function LandingPage() {
 
 const navLinkStyle: React.CSSProperties = {
   fontSize: 14, fontWeight: 500, color: "#666", textDecoration: "none",
+};
+const darkNavLinkStyle: React.CSSProperties = {
+  fontSize: 14, fontWeight: 500, color: "rgba(255,255,255,0.7)", textDecoration: "none",
 };

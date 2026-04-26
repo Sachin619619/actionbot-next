@@ -82,6 +82,12 @@ export const admin = {
   getSessionMessages: (id: string) => request(`/admin/sessions/${id}/messages`),
   getLogs: () => request("/admin/logs"),
   getWidgetCode: () => request("/admin/widget-code"),
+  replyToSession: (sessionId: string, message: string) =>
+    request(`/admin/sessions/${sessionId}/reply`, {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    }),
+  getContacts: () => request("/admin/contacts"),
 };
 
 export const actions = {
