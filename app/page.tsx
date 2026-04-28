@@ -121,20 +121,20 @@ export default function LandingPage() {
       </nav>
 
       {/* ─── HERO ─── */}
-      <section style={{ position: "relative", paddingTop: 140, paddingBottom: 80, overflow: "hidden", background: "#0a0a0a" }}>
-        {/* Background image */}
+      <section style={{ position: "relative", paddingTop: 140, paddingBottom: 80, overflow: "hidden", background: "#0a0a12" }}>
+        {/* SVG Background illustration */}
         <div style={{
           position: "absolute", inset: 0,
-          backgroundImage: "url(/actionbot-bg.png)",
+          backgroundImage: "url(/actionbot-bg.svg)",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
-          opacity: 0.6,
+          opacity: 0.85,
         }} />
         {/* Gradient overlay */}
         <div style={{
           position: "absolute", inset: 0,
-          background: "linear-gradient(to bottom, rgba(10,10,10,0.3) 0%, rgba(10,10,10,0.7) 60%, #0a0a0a 100%)",
+          background: "linear-gradient(to bottom, rgba(10,10,18,0.2) 0%, rgba(10,10,18,0.6) 60%, #0a0a12 100%)",
         }} />
         <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", padding: "0 24px", textAlign: "center" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(232,93,4,0.15)", border: "1px solid rgba(232,93,4,0.25)", borderRadius: 100, padding: "6px 16px", fontSize: 13, fontWeight: 600, color: "#fb923c", marginBottom: 24 }}>
